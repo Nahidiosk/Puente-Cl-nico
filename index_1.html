@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puente Clínico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra superior con rol + menú lateral (pestañas en móvil) + contenido en tarjetas. Paleta: verde azulado clínico, neutros fríos, semáforo para estados. */
+:root{
+  --bg:#f2f5f4; --surface:#ffffff; --ink:#15211f; --muted:#5a6866; --line:#dbe3e1;
+  --accent:#0b6b66; --accent-ink:#ffffff; --accent-soft:#e0efec;
+  --ok:#2f7a4c; --ok-soft:#e3f2e8; --warn:#a8670f; --warn-soft:#fbf0dc; --crit:#b8322a; --crit-soft:#fbe5e2;
+  --info:#2c5aa0; --info-soft:#e4ecf8;
+  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r:12px; --shadow:0 1px 2px rgba(10,40,38,.06),0 4px 14px rgba(10,40,38,.05);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1514; --surface:#162120; --ink:#e6eeec; --muted:#9aaba8;
+    --line:#283836; --accent:#4fbcb2; --accent-ink:#06201e; --accent-soft:#18322f;
+    --ok:#6cc68f; --ok-soft:#163023; --warn:#e3a94f; --warn-soft:#33270f; --crit:#f07a6f; --crit-soft:#3a1b18;
+    --info:#86aef0; --info-soft:#1a2740; --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1514; --surface:#162120; --ink:#e6eeec; --muted:#9aaba8;
+  --line:#283836; --accent:#4fbcb2; --accent-ink:#06201e; --accent-soft:#18322f;
+  --ok:#6cc68f; --ok-soft:#163023; --warn:#e3a94f; --warn-soft:#33270f; --crit:#f07a6f; --crit-soft:#3a1b18;
+  --info:#86aef0; --info-soft:#1a2740; --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);font-weight:650;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:26px} h2{font-size:20px} h3{font-size:16px;font-family:var(--body);font-weight:700;letter-spacing:0}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* Top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center}
+.brand-mark svg{width:20px;height:20px}
+.brand b{font-family:var(--display);font-size:19px;font-weight:650}
+.brand small{display:block;color:var(--muted);font-size:12px;line-height:1.1}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.top select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:230px}
+.bell{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:10px;width:40px;height:38px;display:grid;place-items:center;cursor:pointer;text-decoration:none;color:var(--ink)}
+.bell svg{width:19px;height:19px}
+.bell .dot{position:absolute;top:-6px;right:-6px;background:var(--crit);color:#fff;font-size:11px;font-weight:700;border-radius:999px;min-width:19px;height:19px;padding:0 5px;display:grid;place-items:center}
+.mode{font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.mode.live{color:var(--ok);border-color:currentColor}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;max-width:1180px;margin:0 auto;padding:22px 20px 60px}
+nav.side{position:sticky;top:78px;align-self:start;display:flex;flex-direction:column;gap:2px}
+nav.side a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;color:var(--ink);text-decoration:none;font-weight:500}
+nav.side a:hover{background:var(--surface)}
+nav.side a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+nav.side a .c{margin-left:auto;font-size:12px;background:var(--crit);color:#fff;border-radius:999px;padding:0 7px;font-weight:700}
+nav.side svg{width:18px;height:18px;flex:none}
+main{min-width:0;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.head p{color:var(--muted);margin-top:4px}
+
+/* Components */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.g4{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:12px;align-items:flex-start}
+.row .grow{flex:1;min-width:0}
+.meta{color:var(--muted);font-size:13.5px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 40%,var(--line))}
+.btn.sm{padding:5px 10px;font-size:13.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-crit{background:var(--crit-soft);color:var(--crit)} .p-info{background:var(--info-soft);color:var(--info)}
+.p-mute{background:var(--bg);color:var(--muted)}
+.stripe{border-left:4px solid var(--line)}
+.stripe.s-crit{border-left-color:var(--crit)} .stripe.s-warn{border-left-color:var(--warn)} .stripe.s-ok{border-left-color:var(--ok)} .stripe.s-info{border-left-color:var(--info)}
+.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:500;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chip:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.empty{text-align:center;padding:28px 18px;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+.empty .btn{margin-top:12px}
+.banner{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:var(--r);background:var(--crit-soft);color:var(--ink);font-size:14px}
+.banner svg{width:20px;height:20px;color:var(--crit);flex:none;margin-top:1px}
+.banner.info{background:var(--info-soft)} .banner.info svg{color:var(--info)}
+.stat{padding:14px 16px}
+.stat .n{font-family:var(--display);font-size:32px;font-weight:650;line-height:1.1}
+.stat .l{color:var(--muted);font-size:13.5px}
+.stat.alert .n{color:var(--crit)}
+a.stat{text-decoration:none;color:inherit;display:block}
+a.stat:hover{border-color:var(--accent)}
+.quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.quick button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.quick button:hover{border-color:var(--accent)}
+.quick svg{width:22px;height:22px;color:var(--accent)}
+.quick b{font-size:15px} .quick span{color:var(--muted);font-size:13px}
+.daygroup>h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 8px}
+.time{font-family:var(--display);font-size:20px;font-weight:650;min-width:62px}
+.note{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:14px;margin-top:8px}
+.unread{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;margin-top:7px}
+.read{width:9px;height:9px;flex:none}
+.tabsmini{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabsmini button{border:0;background:none;padding:8px 12px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabsmini button[aria-pressed="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(8,20,19,.45);display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;z-index:50;overflow:auto}
+.overlay.open{display:flex}
+.sheet{background:var(--surface);border-radius:16px;width:100%;max-width:560px;border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.sheet header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.sheet .body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.sheet footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.x{border:0;background:none;cursor:pointer;font-size:22px;line-height:1;color:var(--muted);padding:4px 8px;border-radius:6px}
+label.f{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:14px}
+label.f small{font-weight:400;color:var(--muted)}
+.f input,.f select,.f textarea{padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-weight:400}
+.f textarea{min-height:84px;resize:vertical}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.f select,.f input{width:100%;min-width:0;text-overflow:ellipsis}
+.err{color:var(--crit);font-size:13px;font-weight:500}
+.slots{display:flex;flex-wrap:wrap;gap:6px}
+.slots .chip{font-variant-numeric:tabular-nums}
+.thread{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;padding:4px}
+.msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:14.5px}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:4px}
+.msg.them{align-self:flex-start;background:var(--bg);border-bottom-left-radius:4px}
+.msg small{display:block;opacity:.75;font-size:11.5px;margin-top:3px}
+.checkrow{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.checkrow input{margin-top:4px}
+.daysel{display:flex;gap:5px;flex-wrap:wrap}
+.daysel label{border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font-weight:500;font-size:14px}
+.daysel input{margin-right:5px}
+
+.g3{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.ubic{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:12px;align-items:end;padding:12px 16px}
+.ubic-ico{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;align-self:center}
+.ubic-ico svg{width:19px;height:19px}
+.ubic select:disabled{opacity:.55}
+.regbtn{display:flex;gap:12px;align-items:center;text-align:left;cursor:pointer;padding:12px 14px}
+.regbtn:hover{border-color:var(--accent)}
+.regbtn b{display:block;font-size:14.5px}
+.regnum{font-family:var(--display);font-weight:650;font-size:15px;min-width:38px;height:38px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.place{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13.5px;margin-top:2px}
+.place svg{width:14px;height:14px;flex:none}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tag{font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.crumb{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.crumb button{border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0}
+@media (max-width:820px){ .ubic{grid-template-columns:1fr} .ubic-ico{display:none} }
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-weight:500;z-index:60;display:none;max-width:90vw}
+#toast.show{display:block}
+
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr;padding:12px 16px 60px;gap:14px}
+  nav.side{position:sticky;top:0;flex-direction:row;overflow-x:auto;background:var(--bg);padding:6px 0;z-index:5}
+  nav.side a{white-space:nowrap;padding:7px 11px}
+  .top{padding:10px 16px;position:static}
+  .two{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){ .btn,.chip,nav.side a{transition:background .15s,border-color .15s} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="color:var(--accent-ink)"><path d="M12 5v14M5 12h14"/></svg></div>
+    <div><b>Puente Clínico</b><small>Paciente y médico, conectados</small></div>
+  </div>
+  <span id="mode" class="mode">Conectando…</span>
+  <div class="seg" role="group" aria-label="Ingresar como">
+    <button id="rol-pac" type="button">Paciente</button>
+    <button id="rol-med" type="button">Médico</button>
+  </div>
+  <select id="med-sel" aria-label="Médico" hidden></select>
+  <a class="bell" href="#avisos" aria-label="Avisos" id="bell">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+  </a>
+</header>
+
+<div class="shell">
+  <nav class="side" id="nav" aria-label="Secciones"></nav>
+  <main id="view"></main>
+</div>
+
+<div class="overlay" id="overlay" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <header><h2 id="m-title"></h2><button class="x" type="button" id="m-close" aria-label="Cerrar">×</button></header>
+    <div id="m-content"></div>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
+const DIAS_L = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const today = () => ymd(new Date());
+const fFecha = s => { const d = parseYmd(s); return `${DIAS[d.getDay()]} ${pad(d.getDate())}-${pad(d.getMonth()+1)}`; };
+const fFechaL = s => { const t = parseYmd(s).toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'}); return t.charAt(0).toUpperCase()+t.slice(1); };
+const toMin = h => { const [a,b] = h.split(':').map(Number); return a*60+b; };
+const fromMin = m => `${pad(Math.floor(m/60))}:${pad(m%60)}`;
+function fHace(ms){
+  const s = Math.round((Date.now()-ms)/1000);
+  if (s < 60) return 'recién';
+  if (s < 3600) return `hace ${Math.floor(s/60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s/3600)} h`;
+  const d = new Date(ms); return `${pad(d.getDate())}-${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function addDays(n){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+n); return ymd(d); }
+const ls = { get(k,d){ try{ const v = localStorage.getItem('pc:'+k); return v==null? d : JSON.parse(v);}catch(e){return d;} },
+             set(k,v){ try{ localStorage.setItem('pc:'+k, JSON.stringify(v)); }catch(e){} } };
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),3200); }
+
+/* RUT chileno: módulo 11 */
+function rutValido(r){
+  const c = String(r||'').replace(/[.\s]/g,'').toUpperCase();
+  const m = c.match(/^(\d{7,8})-?([\dK])$/); if(!m) return false;
+  let s=0, f=2; for (let i=m[1].length-1;i>=0;i--){ s += Number(m[1][i])*f; f = f===7?2:f+1; }
+  const dv = 11-(s%11); const esp = dv===11?'0':dv===10?'K':String(dv);
+  return esp===m[2];
+}
+function rutFmt(r){
+  const c = String(r||'').replace(/[.\s-]/g,'').toUpperCase(); if(c.length<2) return r;
+  const cuerpo=c.slice(0,-1), dv=c.slice(-1);
+  return cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+'-'+dv;
+}
+
+/* ---------- Estado ---------- */
+const S = { doctors:[], items:[], avisos:[], centros:[], mode:'cargando', loaded:{doctors:false,items:false,avisos:false,centros:false}, readonly:false };
+const UI = { rol: ls.get('rol','paciente'), medicoId: ls.get('medicoId',''), esp: 'Todas', horasTab:'proximas',
+             region: ls.get('region',''), comuna: ls.get('comuna',''), centro: ls.get('centro','') };
+let DB = null, UID = null;
+const ACTIVA = ['solicitada','confirmada'];
+
+/* ---------- Datos de demostración (solo si no hay base compartida) ---------- */
+const REGIONES = [
+  {id:'AP',num:'XV',nombre:'Arica y Parinacota',comunas:['Arica','Putre']},
+  {id:'TA',num:'I',nombre:'Tarapacá',comunas:['Iquique','Alto Hospicio','Pozo Almonte']},
+  {id:'AN',num:'II',nombre:'Antofagasta',comunas:['Antofagasta','Calama','Tocopilla','Mejillones']},
+  {id:'AT',num:'III',nombre:'Atacama',comunas:['Copiapó','Vallenar','Caldera','Chañaral']},
+  {id:'CO',num:'IV',nombre:'Coquimbo',comunas:['La Serena','Coquimbo','Ovalle','Illapel']},
+  {id:'VS',num:'V',nombre:'Valparaíso',comunas:['Valparaíso','Viña del Mar','Quilpué','Villa Alemana','Quillota','San Antonio','Los Andes','San Felipe']},
+  {id:'RM',num:'RM',nombre:'Metropolitana de Santiago',comunas:['Santiago','Providencia','Las Condes','Vitacura','Ñuñoa','Independencia','Recoleta','San Miguel','Estación Central','Maipú','La Florida','Puente Alto']},
+  {id:'LI',num:'VI',nombre:"Libertador General Bernardo O'Higgins",comunas:['Rancagua','San Fernando','Santa Cruz','Rengo']},
+  {id:'ML',num:'VII',nombre:'Maule',comunas:['Talca','Curicó','Linares','Cauquenes']},
+  {id:'NB',num:'XVI',nombre:'Ñuble',comunas:['Chillán','San Carlos','Bulnes']},
+  {id:'BI',num:'VIII',nombre:'Biobío',comunas:['Concepción','Talcahuano','Los Ángeles','Coronel','Chiguayante','San Pedro de la Paz']},
+  {id:'AR',num:'IX',nombre:'La Araucanía',comunas:['Temuco','Padre Las Casas','Villarrica','Pucón','Angol']},
+  {id:'LR',num:'XIV',nombre:'Los Ríos',comunas:['Valdivia','La Unión','Río Bueno','Panguipulli']},
+  {id:'LL',num:'X',nombre:'Los Lagos',comunas:['Puerto Montt','Osorno','Puerto Varas','Castro','Ancud']},
+  {id:'AI',num:'XI',nombre:'Aysén del General Carlos Ibáñez del Campo',comunas:['Coyhaique','Puerto Aysén','Chile Chico']},
+  {id:'MA',num:'XII',nombre:'Magallanes y de la Antártica Chilena',comunas:['Punta Arenas','Puerto Natales','Porvenir']}
+];
+const DEMO_CENTROS = [
+  {id:'c-ap-juannoe',nombre:'Hospital Regional Dr. Juan Noé Crevani',tipo:'Hospital público',region:'AP',comuna:'Arica'},
+  {id:'c-ta-torres',nombre:'Hospital Regional Dr. Ernesto Torres Galdames',tipo:'Hospital público',region:'TA',comuna:'Iquique'},
+  {id:'c-an-hra',nombre:'Hospital Regional de Antofagasta',tipo:'Hospital público',region:'AN',comuna:'Antofagasta'},
+  {id:'c-an-calama',nombre:'Hospital Dr. Carlos Cisternas',tipo:'Hospital público',region:'AN',comuna:'Calama'},
+  {id:'c-at-copiapo',nombre:'Hospital Regional de Copiapó',tipo:'Hospital público',region:'AT',comuna:'Copiapó'},
+  {id:'c-at-huasco',nombre:'Hospital Provincial del Huasco',tipo:'Hospital público',region:'AT',comuna:'Vallenar'},
+  {id:'c-co-serena',nombre:'Hospital San Juan de Dios de La Serena',tipo:'Hospital público',region:'CO',comuna:'La Serena'},
+  {id:'c-co-coquimbo',nombre:'Hospital San Pablo de Coquimbo',tipo:'Hospital público',region:'CO',comuna:'Coquimbo'},
+  {id:'c-vs-vanburen',nombre:'Hospital Carlos Van Buren',tipo:'Hospital público',region:'VS',comuna:'Valparaíso'},
+  {id:'c-vs-fricke',nombre:'Hospital Dr. Gustavo Fricke',tipo:'Hospital público',region:'VS',comuna:'Viña del Mar'},
+  {id:'c-rm-salvador',nombre:'Hospital del Salvador',tipo:'Hospital público',region:'RM',comuna:'Providencia'},
+  {id:'c-rm-sjd',nombre:'Hospital San Juan de Dios',tipo:'Hospital público',region:'RM',comuna:'Santiago'},
+  {id:'c-rm-uc',nombre:'Hospital Clínico UC',tipo:'Hospital universitario',region:'RM',comuna:'Santiago'},
+  {id:'c-rm-uchile',nombre:'Hospital Clínico Universidad de Chile',tipo:'Hospital universitario',region:'RM',comuna:'Independencia'},
+  {id:'c-rm-barros',nombre:'Hospital Barros Luco Trudeau',tipo:'Hospital público',region:'RM',comuna:'San Miguel'},
+  {id:'c-rm-sotero',nombre:'Hospital Dr. Sótero del Río',tipo:'Hospital público',region:'RM',comuna:'Puente Alto'},
+  {id:'c-rm-alemana',nombre:'Clínica Alemana',tipo:'Clínica privada',region:'RM',comuna:'Vitacura'},
+  {id:'c-rm-clc',nombre:'Clínica Las Condes',tipo:'Clínica privada',region:'RM',comuna:'Las Condes'},
+  {id:'c-li-rancagua',nombre:"Hospital Regional Libertador Bernardo O'Higgins",tipo:'Hospital público',region:'LI',comuna:'Rancagua'},
+  {id:'c-li-sanfernando',nombre:'Hospital San Juan de Dios de San Fernando',tipo:'Hospital público',region:'LI',comuna:'San Fernando'},
+  {id:'c-ml-talca',nombre:'Hospital Regional de Talca',tipo:'Hospital público',region:'ML',comuna:'Talca'},
+  {id:'c-ml-curico',nombre:'Hospital de Curicó',tipo:'Hospital público',region:'ML',comuna:'Curicó'},
+  {id:'c-nb-herminda',nombre:'Hospital Clínico Herminda Martín',tipo:'Hospital público',region:'NB',comuna:'Chillán'},
+  {id:'c-bi-grant',nombre:'Hospital Guillermo Grant Benavente',tipo:'Hospital público',region:'BI',comuna:'Concepción'},
+  {id:'c-bi-higueras',nombre:'Hospital Las Higueras',tipo:'Hospital público',region:'BI',comuna:'Talcahuano'},
+  {id:'c-bi-angeles',nombre:'Complejo Asistencial Dr. Víctor Ríos Ruiz',tipo:'Hospital público',region:'BI',comuna:'Los Ángeles'},
+  {id:'c-ar-hha',nombre:'Hospital Dr. Hernán Henríquez Aravena',tipo:'Hospital público',region:'AR',comuna:'Temuco'},
+  {id:'c-ar-villarrica',nombre:'Hospital de Villarrica',tipo:'Hospital público',region:'AR',comuna:'Villarrica'},
+  {id:'c-lr-valdivia',nombre:'Hospital Base Valdivia',tipo:'Hospital público',region:'LR',comuna:'Valdivia'},
+  {id:'c-ll-pm',nombre:'Hospital de Puerto Montt',tipo:'Hospital público',region:'LL',comuna:'Puerto Montt'},
+  {id:'c-ll-osorno',nombre:'Hospital Base San José de Osorno',tipo:'Hospital público',region:'LL',comuna:'Osorno'},
+  {id:'c-ll-castro',nombre:'Hospital de Castro',tipo:'Hospital público',region:'LL',comuna:'Castro'},
+  {id:'c-ai-coyhaique',nombre:'Hospital Regional de Coyhaique',tipo:'Hospital público',region:'AI',comuna:'Coyhaique'},
+  {id:'c-ma-hcm',nombre:'Hospital Clínico de Magallanes',tipo:'Hospital público',region:'MA',comuna:'Punta Arenas'}
+];
+const DEMO_DOCTORS = [
+  {id:'d1',nombre:'Dra. Camila Rojas',especialidad:'Medicina general',centroId:'c-rm-salvador',disponible:true,dias:[1,2,3,4,5],inicio:'09:00',fin:'13:00',duracion:20,box:'Box 101',nota:''},
+  {id:'d2',nombre:'Dr. Matías Fuentes',especialidad:'Medicina general',centroId:'c-rm-sjd',disponible:true,dias:[1,3,5],inicio:'15:00',fin:'19:00',duracion:20,box:'Box 104',nota:''},
+  {id:'d3',nombre:'Dra. Valentina Soto',especialidad:'Pediatría',centroId:'c-rm-alemana',disponible:true,dias:[1,2,3,4],inicio:'09:00',fin:'12:00',duracion:30,box:'Box 210',nota:''},
+  {id:'d4',nombre:'Dr. Ignacio Muñoz',especialidad:'Cardiología',centroId:'c-rm-salvador',disponible:true,dias:[2,4],inicio:'10:00',fin:'13:00',duracion:30,box:'Box 305',nota:''},
+  {id:'d5',nombre:'Dra. Francisca Díaz',especialidad:'Dermatología',centroId:'c-rm-clc',disponible:false,dias:[1,3],inicio:'14:00',fin:'17:00',duracion:30,box:'Box 220',nota:'De vacaciones hasta el 23-11. Retoma agenda el lunes 23.'},
+  {id:'d6',nombre:'Dr. Tomás Herrera',especialidad:'Traumatología',centroId:'c-rm-sotero',disponible:true,dias:[2,4,5],inicio:'09:00',fin:'12:30',duracion:30,box:'Box 312',nota:''},
+  {id:'d7',nombre:'Dra. Josefa Contreras',especialidad:'Ginecología',centroId:'c-rm-uc',disponible:true,dias:[1,2,4],inicio:'15:00',fin:'18:00',duracion:30,box:'Box 215',nota:''},
+  {id:'d8',nombre:'Dr. Benjamín Araya',especialidad:'Psiquiatría',centroId:'c-rm-barros',disponible:true,dias:[3,5],inicio:'10:00',fin:'14:00',duracion:45,box:'Box 402',nota:''},
+  {id:'d9',nombre:'Dra. Antonia Vega',especialidad:'Endocrinología',centroId:'c-rm-uchile',disponible:true,dias:[2],inicio:'09:00',fin:'13:00',duracion:30,box:'Box 308',nota:''},
+  {id:'d10',nombre:'Dr. Sebastián Pino',especialidad:'Otorrinolaringología',centroId:'c-rm-salvador',disponible:true,dias:[4,5],inicio:'15:00',fin:'18:00',duracion:30,box:'Box 118',nota:''},
+  {id:'d11',nombre:'Dra. Isidora Castillo',especialidad:'Medicina general',centroId:'c-vs-vanburen',disponible:true,dias:[1,2,3,4,5],inicio:'08:30',fin:'12:30',duracion:20,box:'Box 12',nota:''},
+  {id:'d12',nombre:'Dr. Felipe Morales',especialidad:'Pediatría',centroId:'c-vs-fricke',disponible:true,dias:[1,3,5],inicio:'14:00',fin:'17:00',duracion:30,box:'Box 7',nota:''},
+  {id:'d13',nombre:'Dra. Catalina Reyes',especialidad:'Cardiología',centroId:'c-bi-grant',disponible:true,dias:[2,4],inicio:'09:00',fin:'12:00',duracion:30,box:'Box 21',nota:''},
+  {id:'d14',nombre:'Dr. Vicente Espinoza',especialidad:'Medicina general',centroId:'c-bi-higueras',disponible:true,dias:[1,2,3,4,5],inicio:'15:00',fin:'18:00',duracion:20,box:'Box 4',nota:''},
+  {id:'d15',nombre:'Dra. Martina Sepúlveda',especialidad:'Traumatología',centroId:'c-ar-hha',disponible:true,dias:[1,3],inicio:'09:00',fin:'12:00',duracion:30,box:'Box 9',nota:''},
+  {id:'d16',nombre:'Dr. Cristóbal Navarro',especialidad:'Medicina general',centroId:'c-an-hra',disponible:true,dias:[1,2,3,4,5],inicio:'09:00',fin:'13:00',duracion:20,box:'Box 3',nota:''},
+  {id:'d17',nombre:'Dra. Daniela Gutiérrez',especialidad:'Pediatría',centroId:'c-ll-pm',disponible:true,dias:[2,4],inicio:'10:00',fin:'13:00',duracion:30,box:'Box 15',nota:''},
+  {id:'d18',nombre:'Dr. Diego Carrasco',especialidad:'Medicina general',centroId:'c-ma-hcm',disponible:true,dias:[1,3,5],inicio:'09:00',fin:'12:00',duracion:20,box:'Box 2',nota:''},
+  {id:'d19',nombre:'Dra. Fernanda Silva',especialidad:'Ginecología',centroId:'c-co-serena',disponible:true,dias:[2,3],inicio:'15:00',fin:'18:00',duracion:30,box:'Box 11',nota:''},
+  {id:'d20',nombre:'Dr. Joaquín Torres',especialidad:'Medicina general',centroId:'c-ml-talca',disponible:true,dias:[1,2,4,5],inicio:'08:30',fin:'12:30',duracion:20,box:'Box 6',nota:''},
+  {"id": "d21", "nombre": "Dra. Florencia Silva", "especialidad": "Medicina general", "centroId": "c-ap-juannoe", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 232", "nota": ""},
+  {"id": "d22", "nombre": "Dr. Gonzalo Salazar", "especialidad": "Pediatría", "centroId": "c-ap-juannoe", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 223", "nota": ""},
+  {"id": "d23", "nombre": "Dra. Pía Bravo", "especialidad": "Ginecología", "centroId": "c-ap-juannoe", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 249", "nota": ""},
+  {"id": "d24", "nombre": "Dra. Josefina Morales", "especialidad": "Medicina general", "centroId": "c-ta-torres", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 246", "nota": ""},
+  {"id": "d25", "nombre": "Dra. Javiera Poblete", "especialidad": "Medicina interna", "centroId": "c-ta-torres", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 136", "nota": ""},
+  {"id": "d26", "nombre": "Dra. Fernanda López", "especialidad": "Traumatología", "centroId": "c-ta-torres", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 265", "nota": ""},
+  {"id": "d27", "nombre": "Dr. Francisco Rodríguez", "especialidad": "Cardiología", "centroId": "c-an-hra", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 233", "nota": ""},
+  {"id": "d28", "nombre": "Dra. Trinidad Tapia", "especialidad": "Dermatología", "centroId": "c-an-hra", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 331", "nota": ""},
+  {"id": "d29", "nombre": "Dra. Catalina Soto", "especialidad": "Neurología", "centroId": "c-an-hra", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 171", "nota": ""},
+  {"id": "d30", "nombre": "Dr. Agustín Torres", "especialidad": "Medicina general", "centroId": "c-an-calama", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 220", "nota": ""},
+  {"id": "d31", "nombre": "Dr. Gabriel Martínez", "especialidad": "Oftalmología", "centroId": "c-an-calama", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 235", "nota": ""},
+  {"id": "d32", "nombre": "Dra. Javiera Vásquez", "especialidad": "Psiquiatría", "centroId": "c-an-calama", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 294", "nota": ""},
+  {"id": "d33", "nombre": "Dr. Cristián Sánchez", "especialidad": "Medicina general", "centroId": "c-at-copiapo", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 231", "nota": ""},
+  {"id": "d34", "nombre": "Dr. Agustín Sánchez", "especialidad": "Otorrinolaringología", "centroId": "c-at-copiapo", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 171", "nota": ""},
+  {"id": "d35", "nombre": "Dr. Andrés Flores", "especialidad": "Urología", "centroId": "c-at-copiapo", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 357", "nota": ""},
+  {"id": "d36", "nombre": "Dr. Jorge Navarro", "especialidad": "Medicina general", "centroId": "c-at-huasco", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 292", "nota": ""},
+  {"id": "d37", "nombre": "Dr. Rodrigo Tapia", "especialidad": "Broncopulmonar", "centroId": "c-at-huasco", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 164", "nota": ""},
+  {"id": "d38", "nombre": "Dra. Natalia Sandoval", "especialidad": "Endocrinología", "centroId": "c-at-huasco", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 386", "nota": ""},
+  {"id": "d39", "nombre": "Dra. Catalina Rivera", "especialidad": "Medicina general", "centroId": "c-co-serena", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 126", "nota": ""},
+  {"id": "d40", "nombre": "Dr. Agustín Aguilera", "especialidad": "Gastroenterología", "centroId": "c-co-serena", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 240", "nota": ""},
+  {"id": "d41", "nombre": "Dra. Pía Henríquez", "especialidad": "Pediatría", "centroId": "c-co-serena", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 107", "nota": ""},
+  {"id": "d42", "nombre": "Dra. Natalia Vega", "especialidad": "Medicina general", "centroId": "c-co-coquimbo", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 360", "nota": ""},
+  {"id": "d43", "nombre": "Dra. Sofía Rodríguez", "especialidad": "Ginecología", "centroId": "c-co-coquimbo", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 124", "nota": ""},
+  {"id": "d44", "nombre": "Dra. Trinidad Gallardo", "especialidad": "Medicina interna", "centroId": "c-co-coquimbo", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 143", "nota": ""},
+  {"id": "d45", "nombre": "Dra. Javiera Espinoza", "especialidad": "Traumatología", "centroId": "c-vs-vanburen", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 119", "nota": ""},
+  {"id": "d46", "nombre": "Dra. Francisca Valenzuela", "especialidad": "Cardiología", "centroId": "c-vs-vanburen", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 140", "nota": ""},
+  {"id": "d47", "nombre": "Dra. Camila García", "especialidad": "Dermatología", "centroId": "c-vs-vanburen", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 221", "nota": ""},
+  {"id": "d48", "nombre": "Dra. Andrea Vásquez", "especialidad": "Medicina general", "centroId": "c-vs-fricke", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 326", "nota": ""},
+  {"id": "d49", "nombre": "Dra. Romina Reyes", "especialidad": "Neurología", "centroId": "c-vs-fricke", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 315", "nota": ""},
+  {"id": "d50", "nombre": "Dr. Maximiliano Gutiérrez", "especialidad": "Oftalmología", "centroId": "c-rm-salvador", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 364", "nota": ""},
+  {"id": "d51", "nombre": "Dra. Javiera López", "especialidad": "Psiquiatría", "centroId": "c-rm-sjd", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 108", "nota": ""},
+  {"id": "d52", "nombre": "Dr. Martín Castro", "especialidad": "Otorrinolaringología", "centroId": "c-rm-sjd", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 371", "nota": ""},
+  {"id": "d53", "nombre": "Dr. Martín Silva", "especialidad": "Urología", "centroId": "c-rm-sjd", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 298", "nota": ""},
+  {"id": "d54", "nombre": "Dra. Amanda Vera", "especialidad": "Medicina general", "centroId": "c-rm-uc", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 390", "nota": ""},
+  {"id": "d55", "nombre": "Dr. Martín Gómez", "especialidad": "Broncopulmonar", "centroId": "c-rm-uc", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 336", "nota": ""},
+  {"id": "d56", "nombre": "Dr. Eduardo Ortiz", "especialidad": "Endocrinología", "centroId": "c-rm-uc", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 348", "nota": ""},
+  {"id": "d57", "nombre": "Dra. Javiera Cáceres", "especialidad": "Medicina general", "centroId": "c-rm-uchile", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 295", "nota": ""},
+  {"id": "d58", "nombre": "Dra. Romina Olivares", "especialidad": "Gastroenterología", "centroId": "c-rm-uchile", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 233", "nota": ""},
+  {"id": "d59", "nombre": "Dr. Esteban Díaz", "especialidad": "Pediatría", "centroId": "c-rm-uchile", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 240", "nota": ""},
+  {"id": "d60", "nombre": "Dr. Gabriel Morales", "especialidad": "Medicina general", "centroId": "c-rm-barros", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 150", "nota": ""},
+  {"id": "d61", "nombre": "Dra. Trinidad Castillo", "especialidad": "Ginecología", "centroId": "c-rm-barros", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 387", "nota": ""},
+  {"id": "d62", "nombre": "Dr. Rodrigo Pizarro", "especialidad": "Medicina interna", "centroId": "c-rm-barros", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 297", "nota": ""},
+  {"id": "d63", "nombre": "Dra. Romina Castillo", "especialidad": "Medicina general", "centroId": "c-rm-sotero", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 279", "nota": ""},
+  {"id": "d64", "nombre": "Dra. Bárbara Henríquez", "especialidad": "Cardiología", "centroId": "c-rm-sotero", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 125", "nota": ""},
+  {"id": "d65", "nombre": "Dra. Paz Araya", "especialidad": "Dermatología", "centroId": "c-rm-sotero", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 252", "nota": ""},
+  {"id": "d66", "nombre": "Dra. Camila Díaz", "especialidad": "Medicina general", "centroId": "c-rm-alemana", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 236", "nota": ""},
+  {"id": "d67", "nombre": "Dr. Rafael Contreras", "especialidad": "Neurología", "centroId": "c-rm-alemana", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 166", "nota": ""},
+  {"id": "d68", "nombre": "Dra. Camila Martínez", "especialidad": "Oftalmología", "centroId": "c-rm-alemana", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 355", "nota": ""},
+  {"id": "d69", "nombre": "Dra. Trinidad Espinoza", "especialidad": "Medicina general", "centroId": "c-rm-clc", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 169", "nota": ""},
+  {"id": "d70", "nombre": "Dr. Manuel Torres", "especialidad": "Psiquiatría", "centroId": "c-rm-clc", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 366", "nota": ""},
+  {"id": "d71", "nombre": "Dr. Álvaro Leiva", "especialidad": "Otorrinolaringología", "centroId": "c-rm-clc", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 223", "nota": ""},
+  {"id": "d72", "nombre": "Dra. Francisca Martínez", "especialidad": "Medicina general", "centroId": "c-li-rancagua", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 276", "nota": ""},
+  {"id": "d73", "nombre": "Dra. Paula Bustos", "especialidad": "Urología", "centroId": "c-li-rancagua", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 337", "nota": ""},
+  {"id": "d74", "nombre": "Dr. Maximiliano Rivera", "especialidad": "Broncopulmonar", "centroId": "c-li-rancagua", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 312", "nota": ""},
+  {"id": "d75", "nombre": "Dr. Patricio Reyes", "especialidad": "Endocrinología", "centroId": "c-li-rancagua", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 266", "nota": ""},
+  {"id": "d76", "nombre": "Dr. Andrés Pizarro", "especialidad": "Medicina general", "centroId": "c-li-sanfernando", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 322", "nota": ""},
+  {"id": "d77", "nombre": "Dr. Eduardo Riquelme", "especialidad": "Gastroenterología", "centroId": "c-li-sanfernando", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 126", "nota": ""},
+  {"id": "d78", "nombre": "Dra. Daniela Bustos", "especialidad": "Pediatría", "centroId": "c-li-sanfernando", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 377", "nota": ""},
+  {"id": "d79", "nombre": "Dra. Renata Fernández", "especialidad": "Ginecología", "centroId": "c-ml-talca", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 366", "nota": ""},
+  {"id": "d80", "nombre": "Dra. Valeria Araya", "especialidad": "Medicina interna", "centroId": "c-ml-talca", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 205", "nota": ""},
+  {"id": "d81", "nombre": "Dra. Antonella Alarcón", "especialidad": "Traumatología", "centroId": "c-ml-talca", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 262", "nota": ""},
+  {"id": "d82", "nombre": "Dra. Andrea Morales", "especialidad": "Medicina general", "centroId": "c-ml-curico", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 192", "nota": ""},
+  {"id": "d83", "nombre": "Dra. Trinidad Vergara", "especialidad": "Cardiología", "centroId": "c-ml-curico", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 275", "nota": ""},
+  {"id": "d84", "nombre": "Dr. Manuel Contreras", "especialidad": "Dermatología", "centroId": "c-ml-curico", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 246", "nota": ""},
+  {"id": "d85", "nombre": "Dra. Camila Riquelme", "especialidad": "Medicina general", "centroId": "c-nb-herminda", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 126", "nota": ""},
+  {"id": "d86", "nombre": "Dra. Bárbara Vera", "especialidad": "Neurología", "centroId": "c-nb-herminda", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 362", "nota": ""},
+  {"id": "d87", "nombre": "Dra. Camila Saavedra", "especialidad": "Oftalmología", "centroId": "c-nb-herminda", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 354", "nota": ""},
+  {"id": "d88", "nombre": "Dr. Ricardo Bustos", "especialidad": "Psiquiatría", "centroId": "c-nb-herminda", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 192", "nota": ""},
+  {"id": "d89", "nombre": "Dr. Gonzalo García", "especialidad": "Medicina general", "centroId": "c-bi-grant", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 189", "nota": ""},
+  {"id": "d90", "nombre": "Dr. Ricardo Sepúlveda", "especialidad": "Otorrinolaringología", "centroId": "c-bi-grant", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 312", "nota": ""},
+  {"id": "d91", "nombre": "Dra. Valeria Martínez", "especialidad": "Urología", "centroId": "c-bi-grant", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 117", "nota": ""},
+  {"id": "d92", "nombre": "Dra. Paz Núñez", "especialidad": "Broncopulmonar", "centroId": "c-bi-higueras", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 382", "nota": ""},
+  {"id": "d93", "nombre": "Dra. Paula Tapia", "especialidad": "Endocrinología", "centroId": "c-bi-higueras", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 198", "nota": ""},
+  {"id": "d94", "nombre": "Dra. Bárbara Castillo", "especialidad": "Medicina general", "centroId": "c-bi-angeles", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 238", "nota": ""},
+  {"id": "d95", "nombre": "Dr. Rafael Vera", "especialidad": "Gastroenterología", "centroId": "c-bi-angeles", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 321", "nota": ""},
+  {"id": "d96", "nombre": "Dra. Valeria Olivares", "especialidad": "Pediatría", "centroId": "c-bi-angeles", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 284", "nota": ""},
+  {"id": "d97", "nombre": "Dra. Andrea Aguilera", "especialidad": "Medicina general", "centroId": "c-ar-hha", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 248", "nota": ""},
+  {"id": "d98", "nombre": "Dra. Francisca Olivares", "especialidad": "Ginecología", "centroId": "c-ar-hha", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 160", "nota": ""},
+  {"id": "d99", "nombre": "Dr. Felipe Fernández", "especialidad": "Medicina interna", "centroId": "c-ar-hha", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 120", "nota": ""},
+  {"id": "d100", "nombre": "Dra. Macarena González", "especialidad": "Medicina general", "centroId": "c-ar-villarrica", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 317", "nota": ""},
+  {"id": "d101", "nombre": "Dra. Camila Gómez", "especialidad": "Traumatología", "centroId": "c-ar-villarrica", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 264", "nota": ""},
+  {"id": "d102", "nombre": "Dra. Pía Sánchez", "especialidad": "Cardiología", "centroId": "c-ar-villarrica", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 329", "nota": ""},
+  {"id": "d103", "nombre": "Dra. Antonella Zúñiga", "especialidad": "Medicina general", "centroId": "c-lr-valdivia", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 168", "nota": ""},
+  {"id": "d104", "nombre": "Dra. Daniela Henríquez", "especialidad": "Dermatología", "centroId": "c-lr-valdivia", "disponible": true, "dias": [3, 5], "inicio": "09:00", "fin": "12:00", "duracion": 30, "box": "Box 360", "nota": ""},
+  {"id": "d105", "nombre": "Dra. Daniela Zúñiga", "especialidad": "Neurología", "centroId": "c-lr-valdivia", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 338", "nota": ""},
+  {"id": "d106", "nombre": "Dr. Ricardo Reyes", "especialidad": "Oftalmología", "centroId": "c-lr-valdivia", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 127", "nota": ""},
+  {"id": "d107", "nombre": "Dra. Daniela Soto", "especialidad": "Medicina general", "centroId": "c-ll-pm", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 171", "nota": ""},
+  {"id": "d108", "nombre": "Dra. Antonella García", "especialidad": "Psiquiatría", "centroId": "c-ll-pm", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 172", "nota": ""},
+  {"id": "d109", "nombre": "Dr. Maximiliano Campos", "especialidad": "Otorrinolaringología", "centroId": "c-ll-pm", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 218", "nota": ""},
+  {"id": "d110", "nombre": "Dr. Felipe Martínez", "especialidad": "Medicina general", "centroId": "c-ll-osorno", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 323", "nota": ""},
+  {"id": "d111", "nombre": "Dr. Gabriel González", "especialidad": "Urología", "centroId": "c-ll-osorno", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 154", "nota": ""},
+  {"id": "d112", "nombre": "Dra. Antonella González", "especialidad": "Broncopulmonar", "centroId": "c-ll-osorno", "disponible": true, "dias": [1, 2, 3, 4, 5], "inicio": "08:30", "fin": "12:30", "duracion": 20, "box": "Box 168", "nota": ""},
+  {"id": "d113", "nombre": "Dr. Patricio Silva", "especialidad": "Medicina general", "centroId": "c-ll-castro", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 242", "nota": ""},
+  {"id": "d114", "nombre": "Dra. Paz Muñoz", "especialidad": "Endocrinología", "centroId": "c-ll-castro", "disponible": true, "dias": [1, 2, 4], "inicio": "15:00", "fin": "18:00", "duracion": 30, "box": "Box 311", "nota": ""},
+  {"id": "d115", "nombre": "Dr. Jorge Castillo", "especialidad": "Gastroenterología", "centroId": "c-ll-castro", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 299", "nota": ""},
+  {"id": "d116", "nombre": "Dr. Rodrigo Martínez", "especialidad": "Medicina general", "centroId": "c-ai-coyhaique", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 251", "nota": ""},
+  {"id": "d117", "nombre": "Dr. Ricardo Cárcamo", "especialidad": "Pediatría", "centroId": "c-ai-coyhaique", "disponible": true, "dias": [1, 2, 3, 4], "inicio": "08:00", "fin": "11:00", "duracion": 20, "box": "Box 368", "nota": ""},
+  {"id": "d118", "nombre": "Dra. Carolina Vera", "especialidad": "Ginecología", "centroId": "c-ai-coyhaique", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 339", "nota": ""},
+  {"id": "d119", "nombre": "Dra. Daniela Araya", "especialidad": "Medicina interna", "centroId": "c-ma-hcm", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 376", "nota": ""},
+  {"id": "d120", "nombre": "Dr. Rodrigo Castillo", "especialidad": "Traumatología", "centroId": "c-ma-hcm", "disponible": true, "dias": [1, 3, 5], "inicio": "14:00", "fin": "18:00", "duracion": 30, "box": "Box 348", "nota": ""},
+  {"id": "d121", "nombre": "Dr. Mauricio Fuentes", "especialidad": "Cardiología", "centroId": "c-ma-hcm", "disponible": true, "dias": [2, 4], "inicio": "09:00", "fin": "13:00", "duracion": 30, "box": "Box 311", "nota": ""}
+];
+function nextWeekday(dias){ for(let i=1;i<15;i++){ const f=addDays(i); if(dias.includes(parseYmd(f).getDay())) return f; } return addDays(1); }
+function startDemo(){
+  if (S.mode !== 'cargando') return;
+  S.mode = 'demo'; UID = 'demo-paciente';
+  const now = Date.now();
+  S.doctors = DEMO_DOCTORS.map(d=>({...d}));
+  S.centros = DEMO_CENTROS.map(c=>({...c}));
+  const f1 = nextWeekday([1,2,3,4,5]);
+  S.items = [
+    {id:'i1',tipo:'cita',medicoId:'d1',pacienteUid:UID,pacienteNombre:'Paciente de ejemplo',pacienteRut:'12.345.678-5',estado:'confirmada',fecha:f1,hora:'10:00',motivo:'Control de presión arterial',creado:now-86400000*2,actualizado:now-86400000},
+    {id:'i2',tipo:'receta',medicoId:'d1',pacienteUid:UID,pacienteNombre:'Paciente de ejemplo',pacienteRut:'12.345.678-5',estado:'pendiente',medicamento:'Losartán 50 mg',dosis:'1 comprimido cada 24 h',comentario:'Me quedan 5 días de tratamiento.',creado:now-3600000*5,actualizado:now-3600000*5},
+    {id:'i3',tipo:'consulta',medicoId:'d4',pacienteUid:UID,pacienteNombre:'Paciente de ejemplo',pacienteRut:'12.345.678-5',estado:'respondida',asunto:'Resultado del electrocardiograma',mensajes:[
+      {de:'paciente',texto:'Doctor, ya tengo el resultado del electro. ¿Se lo envío antes del control?',ts:now-86400000},
+      {de:'medico',texto:'Sí, tráigalo impreso al control. Si siente dolor de pecho o falta de aire, consulte en urgencia.',ts:now-3600000*20}],creado:now-86400000,actualizado:now-3600000*20},
+    {id:'i4',tipo:'cita',medicoId:'d1',pacienteUid:'otro1',pacienteNombre:'Rosa Pérez',pacienteRut:'9.876.543-3',estado:'solicitada',fecha:f1,hora:'09:20',motivo:'Dolor lumbar hace una semana',creado:now-3600000*2,actualizado:now-3600000*2},
+    {id:'i5',tipo:'incidente',medicoId:'d1',pacienteUid:'otro2',pacienteNombre:'Jorge Lagos',pacienteRut:'15.222.333-0',estado:'nuevo',categoria:'Reacción a medicamento',gravedad:'media',descripcion:'Desde que empecé el antibiótico tengo ronchas en los brazos.',mensajes:[],creado:now-3600000,actualizado:now-3600000}
+  ];
+  S.avisos = [
+    {id:'a1',para:'paciente:'+UID,tipo:'confirmacion',texto:`Dra. Camila Rojas confirmó tu hora del ${fFecha(f1)} a las 10:00.`,itemId:'i1',creado:now-86400000,leido:false},
+    {id:'a2',para:'paciente:'+UID,tipo:'mensaje',texto:'Dr. Ignacio Muñoz respondió tu consulta "Resultado del electrocardiograma".',itemId:'i3',creado:now-3600000*20,leido:false},
+    {id:'a3',para:'medico:d1',tipo:'nueva',texto:`Nueva solicitud de hora: Rosa Pérez, ${fFecha(f1)} 09:20.`,itemId:'i4',creado:now-3600000*2,leido:false},
+    {id:'a4',para:'medico:d1',tipo:'incidente',texto:'Incidente reportado por Jorge Lagos: Reacción a medicamento.',itemId:'i5',creado:now-3600000,leido:false}
+  ];
+  if (!UI.medicoId) UI.medicoId = 'd1';
+  const saved = ls.get('store', null);
+  if (saved && saved.v === 1){ S.items = saved.items||[]; S.avisos = saved.avisos||[]; if (saved.doctors) S.doctors = saved.doctors; if (saved.centros) S.centros = saved.centros; }
+  render();
+}
+
+/* ---------- Conexión a la base compartida ---------- */
+async function init(){
+  render();
+  const timer = setTimeout(()=>{ if (S.mode==='cargando') startDemo(); }, 10000);
+  if (typeof window.claude === 'undefined' || !window.claude.use){ clearTimeout(timer); startDemo(); return; }
+  let db = null, user = null;
+  try { db = await claude.use('db'); } catch(e){ db = null; }
+  if (!db){ clearTimeout(timer); startDemo(); return; }
+  try { user = await claude.use('user'); UID = user ? await user.id() : null; } catch(e){ UID = null; }
+  if (!UID){ UID = ls.get('uid', null) || ('anon-'+Math.random().toString(36).slice(2,10)); ls.set('uid', UID); }
+  try { if (user && user.can){ const w = await user.can('data.write'); if (w===false) S.readonly = true; } } catch(e){}
+  DB = db; S.mode = 'compartido';
+  const sub = (col) => db.collection(col).onSnapshot(snap => {
+      S[col] = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      S.loaded[col] = true;
+      if (!snap.metadata.fromCache && Object.values(S.loaded).every(Boolean)) clearTimeout(timer);
+      render(); refreshThread();
+    }, err => { S.loaded[col] = true; toast('No se pudieron cargar los datos ('+err.code+').'); render(); });
+  sub('doctors'); sub('items'); sub('avisos'); sub('centros');
+}
+
+/* ---------- Escrituras ---------- */
+function rid(){ return Math.random().toString(36).slice(2,12); }
+function saveLocal(){ ls.set('store', { v:1, items:S.items, avisos:S.avisos, doctors:S.doctors, centros:S.centros }); }
+async function addDoc(col, data){
+  if (S.readonly){ toast('Tienes acceso de solo lectura.'); throw new Error('ro'); }
+  if (DB){
+    try { const r = await DB.collection(col).add(data); return r.id; }
+    catch(e){ handleErr(e); throw e; }
+  }
+  const id = rid(); S[col].push({ id, ...data }); saveLocal(); render(); refreshThread(); return id;
+}
+async function updDoc(col, id, patch){
+  if (S.readonly){ toast('Tienes acceso de solo lectura.'); throw new Error('ro'); }
+  if (DB){
+    try { await DB.collection(col).doc(id).update(patch); return; }
+    catch(e){ handleErr(e); throw e; }
+  }
+  const x = S[col].find(o => o.id === id); if (x) Object.assign(x, patch); saveLocal(); render(); refreshThread();
+}
+function handleErr(e){
+  const c = e && e.code;
+  if (c === 'invalid_argument'){ S.readonly = true; toast('No tienes permiso para guardar cambios aquí.'); render(); }
+  else if (c === 'quota_exceeded') toast('La base de datos está llena. Archiva elementos antiguos.');
+  else toast('No se pudo guardar. Intenta de nuevo.');
+}
+async function notify(para, tipo, texto, itemId){
+  try { await addDoc('avisos', { para, tipo, texto, itemId: itemId||'', creado: Date.now(), leido:false }); } catch(e){}
+}
+
+/* ---------- Consultas sobre el estado ---------- */
+const doc = id => S.doctors.find(d => d.id === id);
+const docName = id => (doc(id)?.nombre) || 'Médico';
+const esPac = () => UI.rol === 'paciente';
+const misItems = tipo => S.items.filter(i => i.tipo===tipo && (esPac() ? i.pacienteUid===UID : i.medicoId===UI.medicoId));
+const misAvisos = () => S.avisos.filter(a => a.para === (esPac() ? 'paciente:'+UID : 'medico:'+UI.medicoId)).sort((a,b)=>b.creado-a.creado);
+const especialidades = (l=S.doctors) => [...new Set(l.map(d=>d.especialidad))].sort((a,b)=>a.localeCompare(b,'es'));
+
+/* Ubicación: región → ciudad → centro */
+const region = id => REGIONES.find(r=>r.id===id);
+const centro = id => S.centros.find(c=>c.id===id);
+const regNombre = id => { const r = region(id); return r ? `${r.num==='RM'?'':r.num+' · '}${r.nombre}` : ''; };
+const centrosEn = (reg, com) => S.centros.filter(c=>(!reg||c.region===reg)&&(!com||c.comuna===com)).sort((a,b)=>a.comuna.localeCompare(b.comuna,'es')||a.nombre.localeCompare(b.nombre,'es'));
+const docsEnCentro = id => S.doctors.filter(d=>d.centroId===id);
+function docsEnUbic(){
+  return S.doctors.filter(d=>{ const c = centro(d.centroId);
+    if (UI.centro) return d.centroId===UI.centro;
+    if (UI.region && (!c || c.region!==UI.region)) return false;
+    if (UI.comuna && (!c || c.comuna!==UI.comuna)) return false;
+    return true; });
+}
+function comunasDe(reg){ const r = region(reg); const extra = S.centros.filter(c=>c.region===reg).map(c=>c.comuna); return [...new Set([...(r?r.comunas:[]), ...extra])].sort((a,b)=>a.localeCompare(b,'es')); }
+function setUbic(reg, com, cen){
+  UI.region = reg||''; UI.comuna = com||''; UI.centro = cen||'';
+  ls.set('region',UI.region); ls.set('comuna',UI.comuna); ls.set('centro',UI.centro); UI.esp='Todas';
+}
+function lugarTxt(){
+  if (UI.centro && centro(UI.centro)) return centro(UI.centro).nombre;
+  if (UI.comuna) return UI.comuna;
+  if (UI.region) return 'la Región ' + (region(UI.region)?.nombre || '');
+  return 'todo Chile';
+}
+function ubicBar(){
+  const cs = centrosEn(UI.region, UI.comuna);
+  return `<section class="card ubic" aria-label="Tu ubicación">
+    <div class="ubic-ico" aria-hidden="true">${ico('pin')}</div>
+    <label class="f">Región<select id="u-reg"><option value="">Todas las regiones</option>${REGIONES.map(r=>`<option value="${r.id}" ${r.id===UI.region?'selected':''}>${esc(r.num==='RM'?'':r.num+' · ')}${esc(r.nombre)}</option>`).join('')}</select></label>
+    <label class="f">Ciudad o comuna<select id="u-com" ${UI.region?'':'disabled'}><option value="">Todas</option>${UI.region?comunasDe(UI.region).map(c=>{ const n=centrosEn(UI.region,c).length; return `<option value="${esc(c)}" ${c===UI.comuna?'selected':''}>${esc(c)}${n?` (${n})`:''}</option>`; }).join(''):''}</select></label>
+    <label class="f">Centro de salud<select id="u-cen" ${UI.region?'':'disabled'}><option value="">Todos los centros</option>${UI.region?cs.map(c=>`<option value="${esc(c.id)}" ${c.id===UI.centro?'selected':''}>${esc(c.nombre)}</option>`).join(''):''}</select></label>
+  </section>`;
+}
+function regionGrid(){
+  return `<div class="grid g3">${REGIONES.map(r=>{ const cs=centrosEn(r.id); const nd=S.doctors.filter(d=>cs.some(c=>c.id===d.centroId)).length;
+    return `<button class="card regbtn" data-act="ir-region" data-reg="${r.id}"><span class="regnum">${esc(r.num)}</span><span class="grow"><b>${esc(r.nombre)}</b><span class="meta">${cs.length} centro${cs.length===1?'':'s'} · ${nd} médico${nd===1?'':'s'}</span></span></button>`; }).join('')}</div>`;
+}
+const citaFutura = i => i.fecha > today() || (i.fecha===today() && toMin(i.hora) >= nowMin()-30);
+function nowMin(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+
+function slotsFor(d, fecha){
+  if (!d || !d.disponible) return [];
+  if (!(d.dias||[]).includes(parseYmd(fecha).getDay())) return [];
+  const dur = Number(d.duracion)||30, out = [];
+  const taken = new Set(S.items.filter(i=>i.tipo==='cita'&&i.medicoId===d.id&&i.fecha===fecha&&ACTIVA.includes(i.estado)).map(i=>i.hora));
+  for (let m = toMin(d.inicio); m + dur <= toMin(d.fin); m += dur){
+    const h = fromMin(m);
+    if (fecha === today() && m < nowMin()+30) continue;
+    out.push({ h, libre: !taken.has(h) });
+  }
+  return out;
+}
+function proxima(d){
+  for (let i=0;i<30;i++){ const f = addDays(i); const s = slotsFor(d,f).find(x=>x.libre); if (s) return { fecha:f, hora:s.h }; }
+  return null;
+}
+function hue(str){ let h=0; for (const c of String(str)) h = (h*31 + c.charCodeAt(0)) % 360; return h; }
+function avatar(d){ const ini = d.nombre.replace(/^(Dra?\.)\s*/,'').split(/\s+/).map(w=>w[0]).slice(0,2).join(''); return `<div class="avatar" style="background:hsl(${hue(d.especialidad)} 45% 40%)" aria-hidden="true">${esc(ini)}</div>`; }
+function diasTxt(d){ return (d.dias||[]).slice().sort().map(n=>DIAS[n]).join(', '); }
+
+const EST = {
+  solicitada:['Por confirmar','p-warn'], confirmada:['Confirmada','p-ok'], rechazada:['Rechazada','p-crit'], cancelada:['Cancelada','p-crit'], atendida:['Atendida','p-mute'],
+  pendiente:['Pendiente','p-warn'], aprobada:['Aprobada','p-ok'],
+  abierta:['Esperando respuesta','p-warn'], respondida:['Respondida','p-ok'], cerrada:['Cerrada','p-mute'],
+  nuevo:['Nuevo','p-crit'], revision:['En revisión','p-warn'], resuelto:['Resuelto','p-ok']
+};
+const pill = e => { const [t,c] = EST[e]||[e,'p-mute']; return `<span class="pill ${c}">${esc(t)}</span>`; };
+const GRAV = { alta:['Alta','s-crit','p-crit'], media:['Media','s-warn','p-warn'], baja:['Baja','s-info','p-info'] };
+
+/* ---------- Íconos ---------- */
+const I = {
+  inicio:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  medicos:'<circle cx="12" cy="7" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/>',
+  horas:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
+  recetas:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  consultas:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  incidentes:'<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.01"/>',
+  avisos:'<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  centros:'<path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16"/><path d="M2 21h20M12 7v6M9 10h6M10 21v-4h4v4"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'
+};
+const ico = (k, cls='') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
+
+/* ---------- Render ---------- */
+function route(){ const h = location.hash.replace('#',''); return ['inicio','centros','medicos','horas','recetas','consultas','incidentes','avisos'].includes(h) ? h : 'inicio'; }
+
+function render(){
+  // Encabezado
+  $('#rol-pac').setAttribute('aria-pressed', esPac());
+  $('#rol-med').setAttribute('aria-pressed', !esPac());
+  const sel = $('#med-sel');
+  sel.hidden = esPac();
+  const opts = '<option value="">¿Quién eres?</option>' + S.doctors.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(d=>`<option value="${esc(d.id)}">${esc(d.nombre)} · ${esc(d.especialidad)}</option>`).join('');
+  if (sel._o !== opts){ sel.innerHTML = opts; sel._o = opts; }
+  sel.value = UI.medicoId || '';
+  const m = $('#mode');
+  m.textContent = S.mode==='cargando' ? 'Conectando…' : S.mode==='demo' ? 'Datos en este navegador' : (S.readonly ? 'Solo lectura' : 'Datos compartidos');
+  m.className = 'mode' + (S.mode==='compartido' && !S.readonly ? ' live' : '');
+  m.title = S.mode==='demo' ? 'Los cambios se guardan solo en este navegador' : 'Pacientes y médicos ven los mismos datos en tiempo real';
+  const unread = misAvisos().filter(a=>!a.leido).length;
+  $('#bell').innerHTML = ico('avisos') + (unread ? `<span class="dot num">${unread}</span>` : '');
+
+  // Navegación
+  const r = route();
+  const cnt = {
+    avisos: unread,
+    horas: esPac() ? 0 : misItems('cita').filter(i=>i.estado==='solicitada').length,
+    recetas: esPac() ? 0 : misItems('receta').filter(i=>i.estado==='pendiente').length,
+    consultas: esPac() ? misItems('consulta').filter(i=>i.estado==='respondida' && !i.leidoPac).length : misItems('consulta').filter(i=>i.estado==='abierta').length,
+    incidentes: esPac() ? 0 : misItems('incidente').filter(i=>i.estado==='nuevo').length
+  };
+  const labels = esPac()
+    ? [['inicio','Inicio'],['centros','Centros de salud'],['medicos','Médicos'],['horas','Mis horas'],['recetas','Recetas'],['consultas','Consultas'],['incidentes','Incidentes'],['avisos','Avisos']]
+    : [['inicio','Resumen'],['horas','Agenda'],['recetas','Recetas'],['consultas','Consultas'],['incidentes','Incidentes'],['centros','Centros de salud'],['medicos','Médicos'],['avisos','Avisos']];
+  $('#nav').innerHTML = labels.map(([k,l]) => `<a href="#${k}" ${r===k?'aria-current="page"':''}>${ico(k)}${l}${cnt[k]?`<span class="c num">${cnt[k]}</span>`:''}</a>`).join('');
+
+  // Vista
+  const v = $('#view');
+  if (S.mode === 'cargando'){ v.innerHTML = `<div class="empty">Cargando agenda y médicos…</div>`; return; }
+  if (!esPac() && !doc(UI.medicoId) && r !== 'medicos' && r !== 'centros'){ v.innerHTML = vElegirMedico(); bindView(); return; }
+  const views = { inicio: esPac()?vInicioPac:vInicioMed, centros:vCentros, medicos:vMedicos, horas: esPac()?vHorasPac:vAgenda, recetas:vRecetas, consultas:vConsultas, incidentes:vIncidentes, avisos:vAvisos };
+  v.innerHTML = views[r]();
+  bindView();
+}
+
+function vElegirMedico(){
+  if (!S.doctors.length) return `<div class="head"><div><h1>Equipo médico</h1><p>Aún no hay médicos registrados.</p></div></div>
+    <div class="empty">Agrega el primer médico para empezar a recibir horas y solicitudes.<br><button class="btn pri" data-act="nuevo-medico">Agregar médico</button></div>`;
+  return `<div class="head"><div><h1>¿Quién eres?</h1><p>Elige tu ficha para ver tu agenda, solicitudes y avisos.</p></div><button class="btn" data-act="nuevo-medico">Agregar médico</button></div>
+  <div class="grid g2">${S.doctors.map(d=>`<button class="card row" style="text-align:left;cursor:pointer" data-act="soy" data-id="${esc(d.id)}">${avatar(d)}<div class="grow"><h3>${esc(d.nombre)}</h3><p class="meta">${esc(d.especialidad)}</p>${placeLine(d)}</div></button>`).join('')}</div>`;
+}
+function placeLine(d){
+  const c = centro(d.centroId);
+  return c ? `<p class="place">${ico('pin')}<span>${esc(c.nombre)} · ${esc(c.comuna)}</span></p>` : `<p class="place">${ico('pin')}<span>Sin centro asignado</span></p>`;
+}
+
+/* --- Paciente: inicio --- */
+function vInicioPac(){
+  const perfil = ls.get('perfil', {});
+  const citas = misItems('cita').filter(i=>ACTIVA.includes(i.estado) && citaFutura(i)).sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  const prox = citas[0];
+  const pend = [
+    ...misItems('receta').filter(i=>i.estado==='pendiente').map(i=>({i, t:`Receta: ${i.medicamento}`, k:'recetas'})),
+    ...misItems('consulta').filter(i=>i.estado==='respondida' && !i.leidoPac).map(i=>({i, t:`Respuesta nueva: ${i.asunto}`, k:'consultas'})),
+    ...misItems('incidente').filter(i=>i.estado!=='resuelto').map(i=>({i, t:`Incidente: ${i.categoria}`, k:'incidentes'}))
+  ];
+  const av = misAvisos().slice(0,3);
+  return `
+  <div class="head"><div><h1>Hola${perfil.nombre?', '+esc(perfil.nombre.split(' ')[0]):''}</h1><p>Pide horas, renueva recetas y habla con tu médico desde aquí.</p></div>
+    <button class="btn" data-act="perfil">${perfil.rut?'Tus datos · '+esc(perfil.rut):'Completar tus datos'}</button></div>
+  ${ubicBar()}
+  ${UI.region&&!UI.comuna?`<p class="meta" style="margin-top:-6px">Ahora elige tu ciudad para ver sus hospitales y médicos. <a href="#centros">Elegir ciudad</a></p>`:''}${UI.comuna?`<p class="meta" style="margin-top:-6px">${centrosEn(UI.region,UI.comuna).length} centros de salud y ${docsEnUbic().length} médicos en ${esc(lugarTxt())}. <a href="#centros">Ver tu ciudad</a> · <a href="#medicos">Ver médicos</a></p>`:''}${!UI.region?`<p class="meta" style="margin-top:-6px">Elige tu región y tu ciudad para ver los hospitales y médicos cerca de ti.</p>`:''}
+  <div class="banner">${ico('incidentes')}<div><b>Si es una emergencia, llama al 131 (SAMU)</b> o acude al servicio de urgencia más cercano. Los mensajes de esta app no se responden de inmediato.</div></div>
+  <div class="quick">
+    <button data-act="pedir-hora">${ico('horas')}<b>Pedir hora</b><span>Elige especialidad, médico y horario</span></button>
+    <button data-act="pedir-receta">${ico('recetas')}<b>Solicitar receta</b><span>Renovar un medicamento</span></button>
+    <button data-act="nueva-consulta">${ico('consultas')}<b>Hacer una consulta</b><span>Escribe a tu médico</span></button>
+    <button data-act="nuevo-incidente">${ico('incidentes')}<b>Avisar un incidente</b><span>Reacción, síntoma o problema</span></button>
+  </div>
+  <div class="grid g2">
+    <section class="card"><h2>Tu próxima hora</h2>
+      ${prox ? `<div class="row" style="margin-top:12px"><div class="time num">${esc(prox.hora)}</div><div class="grow"><b>${esc(fFechaL(prox.fecha))}</b><p class="meta">${esc(docName(prox.medicoId))} · ${esc(doc(prox.medicoId)?.especialidad||'')} · ${esc(doc(prox.medicoId)?.box||'')}</p>${doc(prox.medicoId)?placeLine(doc(prox.medicoId)):''}<div style="margin-top:6px">${pill(prox.estado)}</div></div></div>
+        <div class="actions"><button class="btn sm danger" data-act="cancelar" data-id="${esc(prox.id)}">Cancelar hora</button><button class="btn sm" data-act="nuevo-incidente" data-cita="${esc(prox.id)}">Avisar un atraso o problema</button></div>
+        ${citas.length>1?`<p class="meta" style="margin-top:10px">Y ${citas.length-1} hora${citas.length>2?'s':''} más agendada${citas.length>2?'s':''}. <a href="#horas">Ver todas</a></p>`:''}`
+      : `<div class="empty" style="margin-top:12px">No tienes horas agendadas.<br><button class="btn pri" data-act="pedir-hora">Pedir hora</button></div>`}
+    </section>
+    <section class="card"><h2>Pendientes</h2>
+      ${pend.length ? `<div class="list" style="margin-top:10px">${pend.map(p=>`<a href="#${p.k}" class="row" style="text-decoration:none;color:inherit;padding:8px 0;border-bottom:1px solid var(--line)"><div class="grow"><b>${esc(p.t)}</b><p class="meta">${esc(docName(p.i.medicoId))} · ${fHace(p.i.actualizado||p.i.creado)}</p></div>${pill(p.i.estado)}</a>`).join('')}</div>`
+      : `<p class="meta" style="margin-top:10px">Nada pendiente por ahora.</p>`}
+    </section>
+  </div>
+  <section class="card"><div class="head"><h2>Últimos avisos</h2><a href="#avisos" class="btn sm">Ver todos</a></div>
+    ${av.length ? `<div class="list" style="margin-top:10px">${av.map(rowAviso).join('')}</div>` : `<p class="meta" style="margin-top:10px">Aquí verás confirmaciones, cancelaciones y respuestas de tus médicos.</p>`}
+  </section>`;
+}
+
+/* --- Médico: resumen --- */
+function vInicioMed(){
+  const d = doc(UI.medicoId);
+  const citas = misItems('cita');
+  const hoy = citas.filter(i=>i.fecha===today() && ACTIVA.includes(i.estado));
+  const porConf = citas.filter(i=>i.estado==='solicitada');
+  const rec = misItems('receta').filter(i=>i.estado==='pendiente');
+  const cons = misItems('consulta').filter(i=>i.estado==='abierta');
+  const inc = misItems('incidente').filter(i=>i.estado!=='resuelto');
+  const incAlta = inc.filter(i=>i.gravedad==='alta').length;
+  const att = [
+    ...inc.map(i=>({i,k:'incidentes',t:`${i.pacienteNombre}: ${i.categoria}`,g:i.gravedad})),
+    ...porConf.map(i=>({i,k:'horas',t:`${i.pacienteNombre} pide hora el ${fFecha(i.fecha)} ${i.hora}`})),
+    ...rec.map(i=>({i,k:'recetas',t:`${i.pacienteNombre} solicita ${i.medicamento}`})),
+    ...cons.map(i=>({i,k:'consultas',t:`${i.pacienteNombre}: ${i.asunto}`}))
+  ].sort((a,b)=>(b.g==='alta')-(a.g==='alta') || (a.i.creado-b.i.creado));
+  return `
+  <div class="head"><div><h1>${esc(d.nombre)}</h1><p>${esc(d.especialidad)} · ${esc(d.box||'')}</p>${placeLine(d)}</div>
+    <div class="chips"><button class="btn" data-act="avisar-pacientes">Avisar a mis pacientes</button><button class="btn pri" data-act="disp" data-id="${esc(d.id)}">Mi disponibilidad</button></div></div>
+  <div class="grid g4">
+    <a href="#horas" class="card stat ${porConf.length?'alert':''}"><div class="n num">${porConf.length}</div><div class="l">Horas por confirmar</div></a>
+    <a href="#horas" class="card stat"><div class="n num">${hoy.length}</div><div class="l">Pacientes hoy</div></a>
+    <a href="#recetas" class="card stat"><div class="n num">${rec.length}</div><div class="l">Recetas pendientes</div></a>
+    <a href="#consultas" class="card stat"><div class="n num">${cons.length}</div><div class="l">Consultas sin responder</div></a>
+    <a href="#incidentes" class="card stat ${incAlta?'alert':''}"><div class="n num">${inc.length}</div><div class="l">Incidentes abiertos${incAlta?` · ${incAlta} grave${incAlta>1?'s':''}`:''}</div></a>
+  </div>
+  <section class="card stripe ${d.disponible?'s-ok':'s-crit'}"><div class="row"><div class="grow"><h2>Mi disponibilidad</h2>
+    <p class="meta" style="margin-top:4px">${d.disponible?`Atiendes ${esc(diasTxt(d))} de ${esc(d.inicio)} a ${esc(d.fin)}, bloques de ${esc(d.duracion)} min.`:'Tu agenda está cerrada: los pacientes no pueden pedir horas contigo.'}</p>
+    ${d.nota?`<div class="note">${esc(d.nota)}</div>`:''}</div>${d.disponible?'<span class="pill p-ok">Disponible</span>':'<span class="pill p-crit">No disponible</span>'}</div></section>
+  <section class="card"><h2>Requiere tu atención</h2>
+    ${att.length?`<div class="list" style="margin-top:10px">${att.map(a=>`<a href="#${a.k}" class="row" style="text-decoration:none;color:inherit;padding:8px 0;border-bottom:1px solid var(--line)"><div class="grow"><b>${esc(a.t)}</b><p class="meta">${fHace(a.i.creado)}</p></div>${a.g?`<span class="pill ${GRAV[a.g][2]}">Gravedad ${GRAV[a.g][0].toLowerCase()}</span>`:pill(a.i.estado)}</a>`).join('')}</div>`:`<p class="meta" style="margin-top:10px">Todo al día.</p>`}
+  </section>`;
+}
+
+/* --- Médicos por especialidad --- */
+function crumb(){
+  if (!UI.region) return '';
+  const parts = [`<button data-act="ubic" data-reg="" data-com="" data-cen="">Chile</button>`, `<button data-act="ubic" data-reg="${UI.region}" data-com="" data-cen="">${esc(region(UI.region)?.nombre||'')}</button>`];
+  if (UI.comuna) parts.push(`<button data-act="ubic" data-reg="${UI.region}" data-com="${esc(UI.comuna)}" data-cen="">${esc(UI.comuna)}</button>`);
+  if (UI.centro && centro(UI.centro)) parts.push(`<span>${esc(centro(UI.centro).nombre)}</span>`);
+  return `<nav class="crumb" aria-label="Ubicación">${parts.join('<span aria-hidden="true">›</span>')}</nav>`;
+}
+function cityGrid(){
+  const com = comunasDe(UI.region);
+  const con = com.filter(c=>centrosEn(UI.region,c).length), sin = com.filter(c=>!con.includes(c));
+  return `<h2 style="margin-top:4px">¿En qué ciudad estás?</h2>
+  <div class="grid g3">${con.map(c=>{ const cs=centrosEn(UI.region,c); const ds=S.doctors.filter(d=>cs.some(x=>x.id===d.centroId)); const es=especialidades(ds).length;
+    return `<button class="card regbtn" data-act="ir-ciudad" data-com="${esc(c)}"><span class="regnum">${ico('pin')}</span><span class="grow"><b>${esc(c)}</b><span class="meta">${cs.length} centro${cs.length===1?'':'s'} · ${ds.length} médico${ds.length===1?'':'s'} · ${es} especialidad${es===1?'':'es'}</span></span></button>`; }).join('')}</div>
+  ${sin.length?`<p class="meta">Sin centros registrados aún: ${sin.map(esc).join(', ')}.${!esPac()?' Puedes agregarlos con "Agregar centro".':''}</p>`:''}`;
+}
+function docCard(d){
+  const p = proxima(d);
+  return `<article class="card stripe ${d.disponible?'s-ok':'s-crit'}">
+      <div class="row">${avatar(d)}<div class="grow"><h3>${esc(d.nombre)}</h3><p class="meta">${esc(d.especialidad)} · ${esc(d.box||'')}</p>${placeLine(d)}</div>${d.disponible?'<span class="pill p-ok">Disponible</span>':'<span class="pill p-crit">No disponible</span>'}</div>
+      <p class="meta" style="margin-top:10px">Atiende <b style="color:var(--ink)">${esc(diasTxt(d))}</b>, ${esc(d.inicio)}–${esc(d.fin)}</p>
+      <p class="meta num">${d.disponible?(p?`Próxima hora libre: <b style="color:var(--ink)">${esc(fFecha(p.fecha))} ${esc(p.hora)}</b>`:'Sin horas libres en los próximos 30 días'):''}</p>
+      ${d.nota?`<div class="note">${esc(d.nota)}</div>`:''}
+      <div class="actions">${esPac()
+        ? `<button class="btn sm pri" data-act="pedir-hora" data-med="${esc(d.id)}" ${d.disponible&&p?'':'disabled'}>Pedir hora</button><button class="btn sm" data-act="nueva-consulta" data-med="${esc(d.id)}">Escribir</button>`
+        : (d.id===UI.medicoId?`<button class="btn sm pri" data-act="disp" data-id="${esc(d.id)}">Editar mi disponibilidad</button>`:'')}</div>
+    </article>`;
+}
+function vMedicos(){
+  const head = (sub) => `<div class="head"><div><h1>Médicos disponibles</h1><p class="num">${sub}</p></div>${!esPac()?'<button class="btn" data-act="nuevo-medico">Agregar médico</button>':''}</div>`;
+  if (!UI.region) return head('Elige tu región y tu ciudad para ver sus médicos.') + ubicBar() + regionGrid();
+  if (!UI.comuna) return head(`Región ${esc(region(UI.region)?.nombre||'')}: elige tu ciudad.`) + ubicBar() + crumb() + cityGrid();
+  const base = docsEnUbic();
+  const esps = especialidades(base);
+  if (UI.esp!=='Todas' && !esps.includes(UI.esp)) UI.esp='Todas';
+  const lista = base.filter(d=>UI.esp==='Todas'||d.especialidad===UI.esp).sort((a,b)=>a.especialidad.localeCompare(b.especialidad,'es')||(b.disponible-a.disponible)||a.nombre.localeCompare(b.nombre,'es'));
+  const disp = base.filter(d=>d.disponible).length;
+  return head(`${base.length} médico${base.length===1?'':'s'} en ${esc(lugarTxt())} · ${disp} con agenda abierta`) + ubicBar() + crumb() + `
+  ${esps.length?`<div class="chips" role="group" aria-label="Filtrar por especialidad">${['Todas',...esps].map(e=>`<button class="chip" data-act="esp" data-esp="${esc(e)}" aria-pressed="${UI.esp===e}">${esc(e)}</button>`).join('')}</div>`:''}
+  ${lista.length?`<div class="grid g2">${lista.map(docCard).join('')}</div>`
+  :`<div class="empty">Aún no hay médicos registrados en ${esc(lugarTxt())}.<br>Prueba con otra ciudad.${!esPac()?'<br><button class="btn pri" data-act="nuevo-medico">Agregar médico</button>':''}</div>`}`;
+}
+
+function vCentros(){
+  const head = `<div class="head"><div><h1>${UI.comuna?esc(UI.comuna):'Centros de salud'}</h1><p>${!UI.region?'Elige la región en la que estás.':!UI.comuna?`Región ${esc(region(UI.region)?.nombre||'')}: elige tu ciudad para ver sus hospitales y médicos.`:'Hospitales, clínicas y médicos de tu ciudad.'}</p></div>
+    ${!esPac()?'<button class="btn" data-act="nuevo-centro">Agregar centro</button>':''}</div>`;
+  if (!UI.region) return head + ubicBar() + regionGrid();
+  if (!UI.comuna) return head + ubicBar() + crumb() + cityGrid();
+  const cs = centrosEn(UI.region, UI.comuna).filter(c=>!UI.centro||c.id===UI.centro);
+  const ds = docsEnUbic();
+  const libres = ds.map(d=>({d,p:proxima(d)})).filter(x=>x.p).sort((a,b)=>(a.p.fecha+a.p.hora).localeCompare(b.p.fecha+b.p.hora));
+  const esps = especialidades(ds);
+  return head + ubicBar() + crumb() + `
+  <div class="grid g4">
+    <div class="card stat"><div class="n num">${cs.length}</div><div class="l">Centro${cs.length===1?'':'s'} de salud</div></div>
+    <a href="#medicos" class="card stat"><div class="n num">${ds.length}</div><div class="l">Médicos</div></a>
+    <div class="card stat"><div class="n num">${esps.length}</div><div class="l">Especialidades</div></div>
+    <div class="card stat"><div class="n num" style="font-size:22px;padding:5px 0">${libres[0]?esc(fFecha(libres[0].p.fecha))+' '+esc(libres[0].p.hora):'—'}</div><div class="l">Primera hora libre${libres[0]?' · '+esc(libres[0].d.especialidad):''}</div></div>
+  </div>
+  ${cs.length?`<section class="daygroup"><h3>Centros en ${esc(UI.comuna)}</h3><div class="grid g2">${cs.map(c=>{
+      const dc = docsEnCentro(c.id); const es = especialidades(dc); const ab = dc.filter(d=>d.disponible).length;
+      const pc = c.tipo==='Clínica privada'?'p-info':c.tipo==='Hospital universitario'?'p-warn':'p-ok';
+      return `<article class="card"><div class="row"><div class="grow"><h3>${esc(c.nombre)}</h3><p class="place">${ico('pin')}<span>${esc(c.comuna)}, ${esc(region(c.region)?.nombre||'')}</span></p></div><span class="pill ${pc}">${esc(c.tipo)}</span></div>
+        <p class="meta num" style="margin-top:10px">${dc.length?`${dc.length} médico${dc.length===1?'':'s'} · ${ab} con agenda abierta`:'Aún sin médicos registrados en la app'}</p>
+        ${es.length?`<div class="tags">${es.map(e=>`<span class="tag">${esc(e)}</span>`).join('')}</div>`:''}
+        <div class="actions"><button class="btn sm ${dc.length?'pri':''}" data-act="ver-centro" data-id="${esc(c.id)}" ${dc.length?'':'disabled'}>Ver sus médicos</button>
+        ${esPac()&&dc.some(d=>d.disponible)?`<button class="btn sm" data-act="pedir-hora" data-cen="${esc(c.id)}">Pedir hora aquí</button>`:''}</div></article>`; }).join('')}</div></section>`
+    : `<div class="empty">No hay centros registrados en ${esc(UI.comuna)} todavía.${!esPac()?'<br><button class="btn pri" data-act="nuevo-centro">Agregar centro</button>':''}</div>`}
+  ${ds.length?`<section class="daygroup"><h3>Médicos en ${esc(lugarTxt())} · ${ds.length}</h3><div class="grid g2">${ds.slice().sort((a,b)=>a.especialidad.localeCompare(b.especialidad,'es')||a.nombre.localeCompare(b.nombre,'es')).map(docCard).join('')}</div></section>`:''}`;
+}
+/* --- Paciente: mis horas --- */
+function vHorasPac(){
+  const all = misItems('cita');
+  const prox = all.filter(i=>ACTIVA.includes(i.estado)&&citaFutura(i)).sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  const hist = all.filter(i=>!prox.includes(i)).sort((a,b)=>(b.fecha+b.hora).localeCompare(a.fecha+a.hora));
+  const lst = UI.horasTab==='proximas'?prox:hist;
+  return `
+  <div class="head"><div><h1>Mis horas</h1><p>Si no puedes asistir, cancela con anticipación: tu médico recibe el aviso y el cupo queda libre.</p></div><button class="btn pri" data-act="pedir-hora">Pedir hora</button></div>
+  <div class="tabsmini"><button data-act="htab" data-t="proximas" aria-pressed="${UI.horasTab==='proximas'}">Próximas (${prox.length})</button><button data-act="htab" data-t="historial" aria-pressed="${UI.horasTab==='historial'}">Historial (${hist.length})</button></div>
+  ${lst.length?`<div class="list">${lst.map(i=>cardCita(i,true)).join('')}</div>`:`<div class="empty">${UI.horasTab==='proximas'?'No tienes horas próximas.<br><button class="btn pri" data-act="pedir-hora">Pedir hora</button>':'Sin historial todavía.'}</div>`}`;
+}
+function cardCita(i, pac){
+  const d = doc(i.medicoId); const act = ACTIVA.includes(i.estado) && citaFutura(i);
+  const s = i.estado==='cancelada'||i.estado==='rechazada'?'s-crit':i.estado==='solicitada'?'s-warn':i.estado==='confirmada'?'s-ok':'';
+  return `<article class="card stripe ${s}"><div class="row"><div class="time num">${esc(i.hora)}</div><div class="grow">
+    <b>${pac?esc(fFechaL(i.fecha)):esc(i.pacienteNombre)}</b>
+    <p class="meta">${pac?`${esc(d?.nombre||'Médico')} · ${esc(d?.especialidad||'')} · ${esc(d?.box||'')}${d&&centro(d.centroId)?' · '+esc(centro(d.centroId).nombre)+', '+esc(centro(d.centroId).comuna):''}`:`RUT ${esc(i.pacienteRut||'—')}${i.telefono?' · Tel. '+esc(i.telefono):''}`}</p>
+    ${i.motivo?`<p style="margin-top:6px">${esc(i.motivo)}</p>`:''}
+    ${i.estado==='cancelada'?`<div class="note"><b>Cancelada por ${i.canceladoPor==='medico'?'el médico':'el paciente'}:</b> ${esc(i.motivoCancelacion||'Sin motivo indicado')}</div>`:''}
+    ${i.estado==='rechazada'?`<div class="note"><b>Motivo:</b> ${esc(i.motivoCancelacion||'Sin motivo indicado')}</div>`:''}
+  </div>${pill(i.estado)}</div>
+  <div class="actions">${pac
+    ? (act?`<button class="btn sm danger" data-act="cancelar" data-id="${esc(i.id)}">Cancelar hora</button><button class="btn sm" data-act="nuevo-incidente" data-cita="${esc(i.id)}">Avisar atraso o problema</button>`:'')
+      + ((i.estado==='cancelada'&&i.canceladoPor==='medico')||i.estado==='rechazada'?`<button class="btn sm pri" data-act="pedir-hora" data-med="${esc(i.medicoId)}">Pedir otra hora</button>`:'')
+    : (i.estado==='solicitada'?`<button class="btn sm pri" data-act="confirmar" data-id="${esc(i.id)}">Confirmar</button><button class="btn sm danger" data-act="rechazar" data-id="${esc(i.id)}">Rechazar</button>`:'')
+      + (i.estado==='confirmada'?`<button class="btn sm" data-act="atendida" data-id="${esc(i.id)}">Marcar atendida</button><button class="btn sm danger" data-act="cancelar" data-id="${esc(i.id)}">Cancelar hora</button>`:'')
+  }</div></article>`;
+}
+
+/* --- Médico: agenda --- */
+function vAgenda(){
+  const all = misItems('cita');
+  const prox = all.filter(i=>(ACTIVA.includes(i.estado))&&citaFutura(i));
+  const hist = all.filter(i=>!prox.includes(i)).sort((a,b)=>(b.fecha+b.hora).localeCompare(a.fecha+a.hora));
+  const byDay = {}; prox.sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora)).forEach(i=>(byDay[i.fecha]=byDay[i.fecha]||[]).push(i));
+  return `
+  <div class="head"><div><h1>Agenda</h1><p>Confirma solicitudes, cancela con aviso al paciente o informa un atraso del día.</p></div><button class="btn" data-act="avisar-pacientes">Avisar a mis pacientes</button></div>
+  <div class="tabsmini"><button data-act="htab" data-t="proximas" aria-pressed="${UI.horasTab==='proximas'}">Próximas (${prox.length})</button><button data-act="htab" data-t="historial" aria-pressed="${UI.horasTab==='historial'}">Historial (${hist.length})</button></div>
+  ${UI.horasTab==='proximas'
+    ? (Object.keys(byDay).length?Object.entries(byDay).map(([f,l])=>`<section class="daygroup"><h3>${esc(fFechaL(f))}${f===today()?' · hoy':''}</h3><div class="list">${l.map(i=>cardCita(i,false)).join('')}</div></section>`).join(''):'<div class="empty">No hay horas agendadas.</div>')
+    : (hist.length?`<div class="list">${hist.map(i=>cardCita(i,false)).join('')}</div>`:'<div class="empty">Sin historial todavía.</div>')}`;
+}
+
+/* --- Recetas --- */
+function vRecetas(){
+  const l = misItems('receta').sort((a,b)=>(a.estado==='pendiente'?0:1)-(b.estado==='pendiente'?0:1)||b.creado-a.creado);
+  return `
+  <div class="head"><div><h1>Recetas</h1><p>${esPac()?'Pide la renovación de un medicamento. Tu médico la aprueba o te indica qué hacer.':'Revisa y responde las solicitudes de receta de tus pacientes.'}</p></div>${esPac()?'<button class="btn pri" data-act="pedir-receta">Solicitar receta</button>':''}</div>
+  ${l.length?`<div class="list">${l.map(i=>`<article class="card stripe ${i.estado==='pendiente'?'s-warn':i.estado==='aprobada'?'s-ok':'s-crit'}">
+    <div class="row"><div class="grow"><h3>${esc(i.medicamento)}</h3><p class="meta">${esc(i.dosis||'')}${esPac()?' · '+esc(docName(i.medicoId)):' · '+esc(i.pacienteNombre)+' · RUT '+esc(i.pacienteRut||'—')} · ${fHace(i.creado)}</p>
+    ${i.comentario?`<p style="margin-top:6px">${esc(i.comentario)}</p>`:''}
+    ${i.respuesta?`<div class="note"><b>${i.estado==='aprobada'?'Indicaciones del médico':'Respuesta del médico'}:</b> ${esc(i.respuesta)}</div>`:''}</div>${pill(i.estado)}</div>
+    ${!esPac()&&i.estado==='pendiente'?`<div class="actions"><button class="btn sm pri" data-act="receta-ok" data-id="${esc(i.id)}">Aprobar</button><button class="btn sm danger" data-act="receta-no" data-id="${esc(i.id)}">Rechazar</button></div>`:''}
+  </article>`).join('')}</div>`:`<div class="empty">${esPac()?'No has solicitado recetas.<br><button class="btn pri" data-act="pedir-receta">Solicitar receta</button>':'No hay solicitudes de receta.'}</div>`}`;
+}
+
+/* --- Consultas --- */
+function vConsultas(){
+  const l = misItems('consulta').sort((a,b)=>(b.actualizado||b.creado)-(a.actualizado||a.creado));
+  return `
+  <div class="head"><div><h1>Consultas</h1><p>${esPac()?'Escribe a tu médico por dudas que no son urgentes.':'Mensajes de tus pacientes.'}</p></div>${esPac()?'<button class="btn pri" data-act="nueva-consulta">Nueva consulta</button>':''}</div>
+  ${l.length?`<div class="list">${l.map(i=>{ const last=(i.mensajes||[]).slice(-1)[0]; return `<article class="card"><div class="row"><div class="grow"><h3>${esc(i.asunto)}</h3>
+    <p class="meta">${esPac()?esc(docName(i.medicoId)):esc(i.pacienteNombre)} · ${(i.mensajes||[]).length} mensaje${(i.mensajes||[]).length===1?'':'s'} · ${fHace(i.actualizado||i.creado)}</p>
+    ${last?`<p style="margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${last.de==='medico'?'<b>Médico:</b> ':'<b>Paciente:</b> '}${esc(last.texto)}</p>`:''}</div>${pill(i.estado)}</div>
+    <div class="actions"><button class="btn sm pri" data-act="hilo" data-id="${esc(i.id)}">Abrir conversación</button></div></article>`; }).join('')}</div>`
+  :`<div class="empty">${esPac()?'No tienes consultas.<br><button class="btn pri" data-act="nueva-consulta">Nueva consulta</button>':'No hay consultas de pacientes.'}</div>`}`;
+}
+
+/* --- Incidentes --- */
+function vIncidentes(){
+  const l = misItems('incidente').sort((a,b)=>(a.estado==='resuelto')-(b.estado==='resuelto')||({alta:0,media:1,baja:2}[a.gravedad]-{alta:0,media:1,baja:2}[b.gravedad])||b.creado-a.creado);
+  return `
+  <div class="head"><div><h1>Incidentes</h1><p>${esPac()?'Avisa a tu médico de una reacción a un medicamento, un síntoma nuevo, un atraso o cualquier problema con tu atención.':'Incidentes reportados por tus pacientes, ordenados por gravedad.'}</p></div>${esPac()?'<button class="btn pri" data-act="nuevo-incidente">Avisar incidente</button>':''}</div>
+  ${esPac()?`<div class="banner">${ico('incidentes')}<div>Para dolor de pecho, dificultad para respirar, pérdida de conciencia u otra emergencia, <b>llama al 131 (SAMU)</b>. No esperes la respuesta por aquí.</div></div>`:''}
+  ${l.length?`<div class="list">${l.map(i=>{ const g=GRAV[i.gravedad]||GRAV.baja; const c=i.citaId&&S.items.find(x=>x.id===i.citaId); return `<article class="card stripe ${g[1]}">
+    <div class="row"><div class="grow"><h3>${esc(i.categoria)}</h3><p class="meta">${esPac()?esc(docName(i.medicoId)):esc(i.pacienteNombre)+' · RUT '+esc(i.pacienteRut||'—')} · ${fHace(i.creado)}${c?` · hora del ${esc(fFecha(c.fecha))} ${esc(c.hora)}`:''}</p>
+    <p style="margin-top:6px">${esc(i.descripcion)}</p></div>
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end"><span class="pill ${g[2]}">Gravedad ${g[0].toLowerCase()}</span>${pill(i.estado)}</div></div>
+    <div class="actions"><button class="btn sm" data-act="hilo" data-id="${esc(i.id)}">${(i.mensajes||[]).length?`Ver conversación (${i.mensajes.length})`:'Responder'}</button>
+    ${!esPac()&&i.estado==='nuevo'?`<button class="btn sm" data-act="inc-estado" data-id="${esc(i.id)}" data-e="revision">Marcar en revisión</button>`:''}
+    ${!esPac()&&i.estado!=='resuelto'?`<button class="btn sm pri" data-act="inc-estado" data-id="${esc(i.id)}" data-e="resuelto">Marcar resuelto</button>`:''}</div>
+  </article>`; }).join('')}</div>`:`<div class="empty">${esPac()?'No has reportado incidentes.':'Sin incidentes reportados.'}</div>`}`;
+}
+
+/* --- Avisos --- */
+const AV_PILL = { cancelacion:['Cancelación','p-crit'], confirmacion:['Confirmada','p-ok'], receta:['Receta','p-info'], mensaje:['Mensaje','p-info'], incidente:['Incidente','p-crit'], disponibilidad:['Disponibilidad','p-warn'], nueva:['Solicitud','p-warn'], atraso:['Atraso','p-warn'] };
+function rowAviso(a){ const p = AV_PILL[a.tipo]||['Aviso','p-mute'];
+  return `<button class="row" data-act="aviso" data-id="${esc(a.id)}" style="text-align:left;border:0;background:none;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;width:100%">
+  <span class="${a.leido?'read':'unread'}" aria-label="${a.leido?'Leído':'No leído'}"></span><div class="grow"><p style="${a.leido?'':'font-weight:600'}">${esc(a.texto)}</p><p class="meta">${fHace(a.creado)}</p></div><span class="pill ${p[1]}">${p[0]}</span></button>`; }
+function vAvisos(){
+  const l = misAvisos(); const un = l.filter(a=>!a.leido).length;
+  return `<div class="head"><div><h1>Avisos</h1><p>${esPac()?'Confirmaciones, cancelaciones, atrasos y respuestas de tus médicos.':'Nuevas solicitudes, cancelaciones e incidentes de tus pacientes.'}</p></div>${un?`<button class="btn" data-act="leer-todo">Marcar todo como leído</button>`:''}</div>
+  <section class="card">${l.length?`<div class="list" style="gap:0">${l.map(rowAviso).join('')}</div>`:'<p class="meta">Sin avisos todavía.</p>'}</section>`;
+}
+
+/* ---------- Eventos de la vista ---------- */
+function bindView(){}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, id = b.dataset.id;
+  const it = id && S.items.find(x=>x.id===id);
+  switch(a){
+    case 'esp': UI.esp = b.dataset.esp; render(); break;
+    case 'htab': UI.horasTab = b.dataset.t; render(); break;
+    case 'soy': UI.medicoId = id; ls.set('medicoId', id); render(); break;
+    case 'perfil': mPerfil(); break;
+    case 'pedir-hora': mPedirHora(b.dataset.med, b.dataset.cen); break;
+    case 'ir-region': setUbic(b.dataset.reg,'',''); render(); break;
+    case 'ir-ciudad': setUbic(UI.region, b.dataset.com, ''); render(); window.scrollTo(0,0); break;
+    case 'ubic': setUbic(b.dataset.reg, b.dataset.com, b.dataset.cen); render(); break;
+    case 'ver-centro': { const c = centro(id); if (c){ setUbic(c.region, c.comuna, c.id); location.hash='medicos'; render(); } break; }
+    case 'nuevo-centro': mCentro(); break;
+    case 'pedir-receta': mReceta(); break;
+    case 'nueva-consulta': mConsulta(b.dataset.med); break;
+    case 'nuevo-incidente': mIncidente(b.dataset.cita); break;
+    case 'cancelar': mCancelar(it); break;
+    case 'confirmar': await accionCita(it,'confirmada'); break;
+    case 'rechazar': mMotivo('Rechazar solicitud de hora','Motivo para el paciente', 'Ej.: Ese bloque quedó reservado para un procedimiento. Por favor elige otro horario.', async t=>accionCita(it,'rechazada',t)); break;
+    case 'atendida': await updDoc('items', it.id, {estado:'atendida', actualizado:Date.now()}).catch(()=>{}); break;
+    case 'receta-ok': mMotivo('Aprobar receta','Indicaciones para el paciente','Ej.: Receta emitida por 3 meses. Retírala en farmacia con tu carnet.', async t=>accionReceta(it,'aprobada',t), true); break;
+    case 'receta-no': mMotivo('Rechazar receta','Motivo y siguiente paso','Ej.: Necesito evaluarte antes de renovar. Pide una hora de control.', async t=>accionReceta(it,'rechazada',t)); break;
+    case 'hilo': mHilo(id); break;
+    case 'inc-estado': await accionIncidente(it, b.dataset.e); break;
+    case 'disp': mDisponibilidad(doc(id)); break;
+    case 'nuevo-medico': mDisponibilidad(null); break;
+    case 'avisar-pacientes': mAvisarPacientes(); break;
+    case 'aviso': { const av = S.avisos.find(x=>x.id===id); if (!av) break;
+      if (!av.leido) updDoc('avisos', av.id, {leido:true}).catch(()=>{});
+      const ref = S.items.find(x=>x.id===av.itemId);
+      if (ref) { if (ref.tipo==='consulta'||ref.tipo==='incidente'){ location.hash = ref.tipo==='consulta'?'consultas':'incidentes'; mHilo(ref.id); } else location.hash = ref.tipo==='cita'?'horas':'recetas'; }
+      break; }
+    case 'leer-todo': for (const av of misAvisos().filter(x=>!x.leido)){ try{ await updDoc('avisos', av.id, {leido:true}); }catch(e){ break; } } break;
+  }
+});
+$('#view').addEventListener('change', e => {
+  const t = e.target;
+  if (t.id==='u-reg') setUbic(t.value,'','');
+  else if (t.id==='u-com') setUbic(UI.region, t.value, '');
+  else if (t.id==='u-cen') { const c = centro(t.value); setUbic(UI.region, c?c.comuna:UI.comuna, t.value); }
+  else return;
+  render();
+  const again = document.getElementById(t.id); if (again) again.focus();
+});
+$('#rol-pac').onclick = () => { UI.rol='paciente'; ls.set('rol','paciente'); render(); };
+$('#rol-med').onclick = () => { UI.rol='medico'; ls.set('rol','medico'); render(); };
+$('#med-sel').onchange = e => { UI.medicoId = e.target.value; ls.set('medicoId', UI.medicoId); render(); };
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0,0); });
+
+/* ---------- Acciones ---------- */
+async function accionCita(i, estado, motivo){
+  const patch = { estado, actualizado:Date.now() }; if (motivo) patch.motivoCancelacion = motivo;
+  if (estado==='rechazada') patch.canceladoPor = 'medico';
+  try { await updDoc('items', i.id, patch); } catch(e){ return; }
+  const d = docName(i.medicoId);
+  if (estado==='confirmada') await notify('paciente:'+i.pacienteUid,'confirmacion',`${d} confirmó tu hora del ${fFecha(i.fecha)} a las ${i.hora}.`, i.id);
+  if (estado==='rechazada') await notify('paciente:'+i.pacienteUid,'cancelacion',`${d} no pudo tomar tu hora del ${fFecha(i.fecha)} ${i.hora}: ${motivo||'sin motivo'}. Puedes pedir otro horario.`, i.id);
+  toast(estado==='confirmada'?'Hora confirmada. El paciente fue avisado.':'Solicitud rechazada. El paciente fue avisado.');
+}
+async function accionReceta(i, estado, texto){
+  try { await updDoc('items', i.id, { estado, respuesta:texto||'', actualizado:Date.now() }); } catch(e){ return; }
+  await notify('paciente:'+i.pacienteUid, 'receta', `${docName(i.medicoId)} ${estado==='aprobada'?'aprobó':'rechazó'} tu solicitud de ${i.medicamento}.`, i.id);
+  toast('Respuesta enviada al paciente.');
+}
+async function accionIncidente(i, estado){
+  try { await updDoc('items', i.id, { estado, actualizado:Date.now() }); } catch(e){ return; }
+  await notify('paciente:'+i.pacienteUid, 'incidente', `${docName(i.medicoId)} marcó tu incidente "${i.categoria}" como ${estado==='resuelto'?'resuelto':'en revisión'}.`, i.id);
+}
+
+/* ---------- Modales ---------- */
+let MODAL = null;
+function openModal(title, html, kind){
+  $('#m-title').textContent = title; $('#m-content').innerHTML = html; MODAL = kind || {};
+  const o = $('#overlay'); o.classList.add('open'); o.setAttribute('aria-hidden','false');
+  setTimeout(()=>{ const f = $('#m-content').querySelector('input:not([type=hidden]):not([type=checkbox]),select,textarea'); f && f.focus(); }, 30);
+}
+function closeModal(){ const o=$('#overlay'); o.classList.remove('open'); o.setAttribute('aria-hidden','true'); MODAL=null; }
+$('#m-close').onclick = closeModal;
+$('#overlay').addEventListener('mousedown', e => { if (e.target.id==='overlay') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape' && MODAL) closeModal(); });
+const val = id => ($('#'+id)?.value || '').trim();
+const showErr = t => { const el=$('#m-err'); if (el) el.textContent = t; };
+const foot = (txt, extra='') => `<footer><span id="m-err" class="err" style="margin-right:auto;align-self:center"></span>${extra}<button class="btn" type="button" data-close>Cancelar</button><button class="btn pri" type="submit">${txt}</button></footer>`;
+$('#m-content').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
+
+function campoPaciente(){
+  const p = ls.get('perfil', {});
+  return `<div class="two"><label class="f">Nombre completo<input id="p-nom" autocomplete="name" value="${esc(p.nombre||'')}" required></label>
+  <label class="f">RUT<input id="p-rut" placeholder="12.345.678-5" value="${esc(p.rut||'')}" required></label></div>`;
+}
+function leerPaciente(){
+  const nombre = val('p-nom'), rut = val('p-rut');
+  if (!nombre) { showErr('Escribe tu nombre.'); return null; }
+  if (!rutValido(rut)) { showErr('El RUT no es válido. Revisa el dígito verificador.'); return null; }
+  const p = { ...ls.get('perfil',{}), nombre, rut: rutFmt(rut) }; ls.set('perfil', p);
+  return p;
+}
+
+function mPerfil(){
+  const p = ls.get('perfil',{});
+  openModal('Tus datos', `<form id="f"><div class="body">${campoPaciente()}<label class="f">Teléfono <small>Para que tu médico pueda contactarte</small><input id="p-tel" inputmode="tel" placeholder="+56 9 1234 5678" value="${esc(p.tel||'')}"></label>
+  <p class="meta">Se guardan en este navegador y se adjuntan a tus solicitudes.</p></div>${foot('Guardar')}</form>`);
+  $('#f').onsubmit = e => { e.preventDefault(); const pp = leerPaciente(); if (!pp) return; ls.set('perfil', {...pp, tel: val('p-tel')}); closeModal(); render(); toast('Datos guardados.'); };
+}
+
+function mPedirHora(medId, cenId){
+  const pre = medId && doc(medId);
+  const preC = centro(pre ? pre.centroId : cenId) || null;
+  const st = { reg: preC ? preC.region : UI.region, com: preC ? preC.comuna : UI.comuna, cen: preC ? preC.id : UI.centro, esp: pre ? pre.especialidad : (UI.esp!=='Todas'?UI.esp:''), med: pre ? pre.id : '', fecha:'', hora:'' };
+  openModal('Pedir hora', `<form id="f"><div class="body">
+    <div class="two"><label class="f">Región<select id="h-reg"><option value="">Elige tu región…</option>${REGIONES.map(r=>`<option value="${r.id}" ${r.id===st.reg?'selected':''}>${esc(r.nombre)}</option>`).join('')}</select></label>
+    <label class="f">Ciudad<select id="h-com"></select></label></div>
+    <div class="two"><label class="f">Centro de salud<select id="h-cen"></select></label>
+    <label class="f">Especialidad<select id="h-esp"></select></label></div>
+    <label class="f">Médico<select id="h-med"></select></label>
+    <div id="h-nota"></div>
+    <div><p style="font-weight:600;font-size:14px;margin-bottom:6px">Día</p><div id="h-dias" class="slots"><span class="meta">Elige un médico para ver sus días.</span></div></div>
+    <div><p style="font-weight:600;font-size:14px;margin-bottom:6px">Horario</p><div id="h-horas" class="slots"><span class="meta">Elige un día.</span></div></div>
+    <label class="f">Motivo de la consulta<textarea id="h-mot" placeholder="Ej.: Control anual, dolor de garganta hace 3 días…" required></textarea></label>
+    ${campoPaciente()}
+  </div>${foot('Solicitar hora')}</form>`, {kind:'hora'});
+  const docsSel = () => S.doctors.filter(d=>{ const c=centro(d.centroId); return c && c.region===st.reg && (!st.com || c.comuna===st.com) && (!st.cen || d.centroId===st.cen); });
+  const fillCom = () => {
+    const coms = comunasDe(st.reg).filter(c=>centrosEn(st.reg,c).some(x=>docsEnCentro(x.id).length));
+    if (!coms.includes(st.com)) st.com='';
+    $('#h-com').disabled = !st.reg;
+    $('#h-com').innerHTML = !st.reg ? '<option value="">Primero la región</option>' : `<option value="">Todas las ciudades</option>` + coms.map(c=>`<option ${c===st.com?'selected':''}>${esc(c)}</option>`).join('');
+  };
+  const fillCen = () => {
+    const cs = centrosEn(st.reg, st.com).filter(c=>docsEnCentro(c.id).length);
+    if (!cs.some(c=>c.id===st.cen)) st.cen='';
+    $('#h-cen').disabled = !st.reg;
+    $('#h-cen').innerHTML = !st.reg ? '<option value="">Primero la región</option>' : (cs.length ? `<option value="">${st.com?'Todos los centros de '+esc(st.com):'Todos los centros de la región'}</option>` + cs.map(c=>`<option value="${esc(c.id)}" ${c.id===st.cen?'selected':''}>${esc(c.nombre)} · ${esc(c.comuna)}</option>`).join('') : '<option value="">Sin centros con médicos en la app</option>');
+  };
+  const fillEsp = () => {
+    const es = especialidades(docsSel());
+    if (!es.includes(st.esp)) st.esp='';
+    $('#h-esp').innerHTML = `<option value="">${es.length?'Elige…':'Sin especialidades aquí'}</option>` + es.map(e=>`<option ${e===st.esp?'selected':''}>${esc(e)}</option>`).join('');
+  };
+  const fillMed = () => {
+    const l = docsSel().filter(d=>d.especialidad===st.esp);
+    $('#h-med').innerHTML = `<option value="">${st.esp?'Elige…':'Primero la especialidad'}</option>` + l.map(d=>{ const p=proxima(d); return `<option value="${esc(d.id)}" ${d.id===st.med?'selected':''} ${d.disponible&&p?'':'disabled'}>${esc(d.nombre)}${st.cen?'':' · '+esc(centro(d.centroId)?.nombre||'')+(st.com?'':', '+esc(centro(d.centroId)?.comuna||''))}${!d.disponible?' (no disponible)':!p?' (sin cupos)':''}</option>`; }).join('');
+    if (!l.some(d=>d.id===st.med)) st.med='';
+  };
+  $('#h-reg').onchange = e => { st.reg = e.target.value; st.com=''; st.cen=''; fillCom(); fillCen(); fillEsp(); fillMed(); fillDias(); };
+  $('#h-com').onchange = e => { st.com = e.target.value; st.cen=''; fillCen(); fillEsp(); fillMed(); fillDias(); };
+  $('#h-cen').onchange = e => { st.cen = e.target.value; fillEsp(); fillMed(); fillDias(); };
+  const fillDias = () => {
+    const d = doc(st.med); st.fecha=''; st.hora='';
+    $('#h-nota').innerHTML = d && d.nota ? `<div class="note">${esc(d.nota)}</div>` : '';
+    if (!d){ $('#h-dias').innerHTML = '<span class="meta">Elige un médico para ver sus días.</span>'; fillHoras(); return; }
+    const dias = []; for (let i=0;i<21 && dias.length<10;i++){ const f=addDays(i); const s=slotsFor(d,f); if (s.length) dias.push({f, libres:s.filter(x=>x.libre).length}); }
+    $('#h-dias').innerHTML = dias.length ? dias.map(x=>`<button type="button" class="chip" data-f="${x.f}" ${x.libres?'':'disabled'} aria-pressed="false">${esc(fFecha(x.f))} <span class="meta">· ${x.libres}</span></button>`).join('') : '<span class="meta">Sin días disponibles en las próximas 3 semanas.</span>';
+    fillHoras();
+  };
+  const fillHoras = () => {
+    const d = doc(st.med);
+    if (!d || !st.fecha){ $('#h-horas').innerHTML = '<span class="meta">Elige un día.</span>'; return; }
+    $('#h-horas').innerHTML = slotsFor(d, st.fecha).map(s=>`<button type="button" class="chip" data-h="${s.h}" ${s.libre?'':'disabled'} aria-pressed="${s.h===st.hora}">${s.h}</button>`).join('');
+  };
+  $('#h-esp').onchange = e => { st.esp = e.target.value; st.med=''; fillMed(); fillDias(); };
+  $('#h-med').onchange = e => { st.med = e.target.value; fillDias(); };
+  $('#h-dias').onclick = e => { const c=e.target.closest('[data-f]'); if(!c||c.disabled) return; st.fecha=c.dataset.f; st.hora=''; [...$('#h-dias').children].forEach(x=>x.setAttribute('aria-pressed', x===c)); fillHoras(); };
+  $('#h-horas').onclick = e => { const c=e.target.closest('[data-h]'); if(!c||c.disabled) return; st.hora=c.dataset.h; [...$('#h-horas').children].forEach(x=>x.setAttribute('aria-pressed', x===c)); };
+  fillCom(); fillCen(); fillEsp(); fillMed(); fillDias();
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    if (!st.med || !st.fecha || !st.hora) return showErr('Elige médico, día y horario.');
+    if (!val('h-mot')) return showErr('Cuéntale al médico el motivo.');
+    const p = leerPaciente(); if (!p) return;
+    const d = doc(st.med);
+    if (!slotsFor(d, st.fecha).find(s=>s.h===st.hora && s.libre)){ showErr('Ese horario se acaba de ocupar. Elige otro.'); fillHoras(); return; }
+    const btn = e.submitter; if (btn) btn.disabled = true;
+    try {
+      const id = await addDoc('items', { tipo:'cita', medicoId:d.id, pacienteUid:UID, pacienteNombre:p.nombre, pacienteRut:p.rut, telefono:p.tel||'', estado:'solicitada', fecha:st.fecha, hora:st.hora, motivo:val('h-mot'), creado:Date.now(), actualizado:Date.now() });
+      await notify('medico:'+d.id, 'nueva', `Nueva solicitud de hora: ${p.nombre}, ${fFecha(st.fecha)} ${st.hora}.`, id);
+      closeModal(); location.hash = 'horas'; toast(`Hora solicitada con ${d.nombre}. Te avisaremos cuando la confirme.`);
+    } catch(err){ if (btn) btn.disabled = false; }
+  };
+}
+
+function selMedico(id, pre, soloTratantes){
+  const mios = new Set(soloTratantes ? S.items.filter(i=>i.pacienteUid===UID).map(i=>i.medicoId) : []);
+  const zona = new Set(docsEnUbic().map(d=>d.id));
+  const sorted = S.doctors.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  const opt = d => `<option value="${esc(d.id)}" ${d.id===pre?'selected':''}>${esc(d.nombre)} · ${esc(d.especialidad)}${centro(d.centroId)?' · '+esc(centro(d.centroId).nombre):''}</option>`;
+  const g1 = sorted.filter(d=>mios.has(d.id)), g2 = sorted.filter(d=>!mios.has(d.id)&&UI.region&&zona.has(d.id)), g3 = sorted.filter(d=>!g1.includes(d)&&!g2.includes(d));
+  const grp = (t,l) => l.length ? `<optgroup label="${esc(t)}">${l.map(opt).join('')}</optgroup>` : '';
+  return `<select id="${id}"><option value="">Elige…</option>${grp('Tus médicos',g1)}${grp('En '+lugarTxt(),g2)}${grp(g1.length||g2.length?'Otros médicos':'Médicos',g3)}</select>`;
+}
+
+function mReceta(){
+  openModal('Solicitar receta', `<form id="f"><div class="body">
+    <label class="f">Médico tratante${selMedico('r-med','',true)}</label>
+    <div class="two"><label class="f">Medicamento y dosis<input id="r-med-n" placeholder="Ej.: Metformina 850 mg" required></label>
+    <label class="f">Cómo lo tomas<input id="r-dos" placeholder="Ej.: 1 comprimido con almuerzo y cena"></label></div>
+    <label class="f">Comentario <small>Opcional: cuántos días te quedan, efectos, cambios</small><textarea id="r-com"></textarea></label>
+    ${campoPaciente()}</div>${foot('Enviar solicitud')}</form>`);
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const m = val('r-med'), n = val('r-med-n');
+    if (!m) return showErr('Elige a tu médico.'); if (!n) return showErr('Escribe el medicamento.');
+    const p = leerPaciente(); if (!p) return;
+    try { const id = await addDoc('items', { tipo:'receta', medicoId:m, pacienteUid:UID, pacienteNombre:p.nombre, pacienteRut:p.rut, estado:'pendiente', medicamento:n, dosis:val('r-dos'), comentario:val('r-com'), respuesta:'', creado:Date.now(), actualizado:Date.now() });
+      await notify('medico:'+m, 'receta', `${p.nombre} solicita receta de ${n}.`, id);
+      closeModal(); location.hash='recetas'; toast('Solicitud enviada a tu médico.'); } catch(err){}
+  };
+}
+
+function mConsulta(medId){
+  openModal('Nueva consulta', `<form id="f"><div class="body">
+    <label class="f">Médico${selMedico('c-med', medId||'', true)}</label>
+    <label class="f">Asunto<input id="c-as" placeholder="Ej.: Duda sobre mis exámenes" required></label>
+    <label class="f">Mensaje<textarea id="c-msg" required></textarea></label>
+    ${campoPaciente()}
+    <p class="meta">Para emergencias llama al 131. Las consultas se responden en horario de atención.</p></div>${foot('Enviar')}</form>`);
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const m = val('c-med'), as = val('c-as'), msg = val('c-msg');
+    if (!m || !as || !msg) return showErr('Completa médico, asunto y mensaje.');
+    const p = leerPaciente(); if (!p) return;
+    try { const id = await addDoc('items', { tipo:'consulta', medicoId:m, pacienteUid:UID, pacienteNombre:p.nombre, pacienteRut:p.rut, estado:'abierta', asunto:as, mensajes:[{de:'paciente',texto:msg,ts:Date.now()}], creado:Date.now(), actualizado:Date.now() });
+      await notify('medico:'+m, 'mensaje', `Nueva consulta de ${p.nombre}: "${as}".`, id);
+      closeModal(); location.hash='consultas'; toast('Consulta enviada.'); } catch(err){}
+  };
+}
+
+function mIncidente(citaId){
+  const c = citaId && S.items.find(x=>x.id===citaId);
+  const cats = ['Reacción a medicamento','Síntoma nuevo o que empeora','Voy atrasado a mi hora','Problema con mi receta','Problema con la atención','Otro'];
+  openModal('Avisar un incidente', `<form id="f"><div class="body">
+    <div class="banner" style="font-size:13.5px">${ico('incidentes')}<div>Si es una emergencia, <b>llama al 131 (SAMU)</b> ahora.</div></div>
+    <div class="two"><label class="f">Médico${selMedico('n-med', c?c.medicoId:'', true)}</label>
+    <label class="f">Tipo<select id="n-cat">${cats.map(x=>`<option ${c&&x.startsWith('Voy')?'selected':''}>${x}</option>`).join('')}</select></label></div>
+    <fieldset style="border:0;padding:0;margin:0"><legend style="font-weight:600;font-size:14px;margin-bottom:6px">Gravedad</legend><div class="chips" id="n-grav">
+      <button type="button" class="chip" data-g="baja" aria-pressed="${c?'true':'false'}">Baja</button><button type="button" class="chip" data-g="media" aria-pressed="${c?'false':'true'}">Media</button><button type="button" class="chip" data-g="alta" aria-pressed="false">Alta</button></div></fieldset>
+    <label class="f">¿Qué pasó?<textarea id="n-desc" placeholder="${c?`Ej.: Voy 15 minutos tarde a mi hora de las ${esc(c.hora)}.`:'Describe qué sientes o qué ocurrió y desde cuándo.'}" required></textarea></label>
+    ${c?`<p class="meta">Asociado a tu hora del ${esc(fFechaL(c.fecha))} a las ${esc(c.hora)}.</p>`:''}
+    ${campoPaciente()}</div>${foot('Enviar aviso')}</form>`);
+  let grav = c ? 'baja' : 'media';
+  $('#n-grav').onclick = e => { const b=e.target.closest('[data-g]'); if(!b) return; grav=b.dataset.g; [...$('#n-grav').children].forEach(x=>x.setAttribute('aria-pressed', x===b)); };
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const m = val('n-med'), d = val('n-desc'), cat = val('n-cat');
+    if (!m || !d) return showErr('Elige médico y describe el incidente.');
+    const p = leerPaciente(); if (!p) return;
+    try { const id = await addDoc('items', { tipo:'incidente', medicoId:m, pacienteUid:UID, pacienteNombre:p.nombre, pacienteRut:p.rut, estado:'nuevo', categoria:cat, gravedad:grav, descripcion:d, citaId:c?c.id:'', mensajes:[], creado:Date.now(), actualizado:Date.now() });
+      await notify('medico:'+m, 'incidente', `${grav==='alta'?'URGENTE · ':''}${p.nombre} reportó: ${cat}.`, id);
+      closeModal(); location.hash='incidentes'; toast('Aviso enviado a tu médico.'); } catch(err){}
+  };
+}
+
+function mCancelar(i){
+  if (!i) return;
+  const pac = esPac();
+  openModal('Cancelar hora', `<form id="f"><div class="body">
+    <p><b>${esc(fFechaL(i.fecha))}, ${esc(i.hora)}</b><br><span class="meta">${pac?esc(docName(i.medicoId)):esc(i.pacienteNombre)}</span></p>
+    <label class="f">Motivo <small>${pac?'Tu médico lo verá':'El paciente recibirá este aviso'}</small><textarea id="x-mot" placeholder="${pac?'Ej.: Me surgió un imprevisto en el trabajo.':'Ej.: Tengo una urgencia quirúrgica. Por favor reagenda desde la app.'}" required></textarea></label>
+  </div>${foot('Cancelar hora')}</form>`);
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const mot = val('x-mot'); if (!mot) return showErr('Indica el motivo.');
+    try { await updDoc('items', i.id, { estado:'cancelada', canceladoPor: pac?'paciente':'medico', motivoCancelacion:mot, actualizado:Date.now() }); } catch(err){ return; }
+    if (pac) await notify('medico:'+i.medicoId, 'cancelacion', `${i.pacienteNombre} canceló su hora del ${fFecha(i.fecha)} ${i.hora}: ${mot}`, i.id);
+    else await notify('paciente:'+i.pacienteUid, 'cancelacion', `${docName(i.medicoId)} canceló tu hora del ${fFecha(i.fecha)} ${i.hora}: ${mot}. Puedes pedir otra hora.`, i.id);
+    closeModal(); toast(pac?'Hora cancelada. Tu médico fue avisado y el cupo quedó libre.':'Hora cancelada. El paciente fue avisado.');
+  };
+}
+
+function mMotivo(title, label, ph, fn, optional){
+  openModal(title, `<form id="f"><div class="body"><label class="f">${esc(label)}${optional?' <small>Opcional</small>':''}<textarea id="mm" placeholder="${esc(ph)}"></textarea></label></div>${foot('Enviar')}</form>`);
+  $('#f').onsubmit = async e => { e.preventDefault(); const t = val('mm'); if (!t && !optional) return showErr('Escribe un mensaje para el paciente.'); await fn(t); closeModal(); };
+}
+
+function threadHtml(i){
+  const me = esPac() ? 'paciente' : 'medico';
+  const ms = i.mensajes||[];
+  const head = i.tipo==='incidente' ? [{de:'paciente', texto:i.descripcion, ts:i.creado}] : [];
+  const all = [...head, ...ms];
+  return all.length ? all.map(m=>`<div class="msg ${m.de===me?'me':'them'}">${esc(m.texto)}<small>${m.de==='medico'?esc(docName(i.medicoId)):esc(i.pacienteNombre)} · ${fHace(m.ts)}</small></div>`).join('') : '<p class="meta">Sin mensajes.</p>';
+}
+function mHilo(id){
+  const i = S.items.find(x=>x.id===id); if (!i) return;
+  if (esPac() && i.tipo==='consulta' && i.estado==='respondida' && !i.leidoPac) updDoc('items', i.id, {leidoPac:true}).catch(()=>{});
+  const cerrada = i.estado==='cerrada';
+  openModal(i.tipo==='consulta'?i.asunto:i.categoria, `<form id="f"><div class="body">
+    <p class="meta">${esPac()?esc(docName(i.medicoId)):esc(i.pacienteNombre)+' · RUT '+esc(i.pacienteRut||'—')} · ${pill(i.estado)}</p>
+    <div class="thread" id="thread">${threadHtml(i)}</div>
+    ${cerrada?'<p class="meta">Esta consulta está cerrada.</p>':`<label class="f">Tu mensaje<textarea id="t-msg" placeholder="Escribe aquí…"></textarea></label>`}
+  </div>${cerrada?'<footer><button class="btn" type="button" data-close>Cerrar</button></footer>':foot('Enviar', !esPac()&&i.tipo==='consulta'?'<button class="btn" type="button" id="t-cerrar">Cerrar consulta</button>':'')}</form>`, {kind:'thread', id});
+  const th = $('#thread'); th.scrollTop = th.scrollHeight;
+  const cerrarBtn = $('#t-cerrar'); if (cerrarBtn) cerrarBtn.onclick = async () => { try{ await updDoc('items', i.id, {estado:'cerrada', actualizado:Date.now()}); }catch(e){ return; } closeModal(); toast('Consulta cerrada.'); };
+  if (cerrada) return;
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const t = val('t-msg'); if (!t) return;
+    const cur = S.items.find(x=>x.id===id); const de = esPac()?'paciente':'medico';
+    const patch = { mensajes:[...(cur.mensajes||[]), {de, texto:t, ts:Date.now()}], actualizado:Date.now() };
+    if (cur.tipo==='consulta'){ patch.estado = de==='medico'?'respondida':'abierta'; if (de==='medico') patch.leidoPac = false; }
+    if (cur.tipo==='incidente' && de==='medico' && cur.estado==='nuevo') patch.estado = 'revision';
+    try { await updDoc('items', id, patch); } catch(err){ return; }
+    $('#t-msg').value = '';
+    if (de==='medico') await notify('paciente:'+cur.pacienteUid, 'mensaje', `${docName(cur.medicoId)} respondió: "${cur.asunto||cur.categoria}".`, id);
+    else await notify('medico:'+cur.medicoId, 'mensaje', `${cur.pacienteNombre} escribió en "${cur.asunto||cur.categoria}".`, id);
+    refreshThread();
+  };
+}
+function refreshThread(){
+  if (!MODAL || MODAL.kind!=='thread') return;
+  const i = S.items.find(x=>x.id===MODAL.id); const th = $('#thread'); if (!i || !th) return;
+  const h = threadHtml(i); if (th._h !== h){ th.innerHTML = h; th._h = h; th.scrollTop = th.scrollHeight; }
+}
+
+function mDisponibilidad(d){
+  const nuevo = !d;
+  d = d || { nombre:'', especialidad:'', box:'', disponible:true, dias:[1,2,3,4,5], inicio:'09:00', fin:'13:00', duracion:30, nota:'' };
+  const esps = especialidades();
+  openModal(nuevo?'Agregar médico':'Mi disponibilidad', `<form id="f"><div class="body">
+    ${nuevo?`<div class="two"><label class="f">Nombre<input id="d-nom" placeholder="Dra. Nombre Apellido" required></label>
+    <label class="f">Especialidad<input id="d-esp" list="d-esps" placeholder="Ej.: Pediatría" required><datalist id="d-esps">${esps.map(e=>`<option value="${esc(e)}">`).join('')}</datalist></label></div>
+    <label class="f">Box o consulta<input id="d-box" placeholder="Box 101"></label>`:''}
+    <div class="two"><label class="f">Región donde atiendes<select id="d-reg"><option value="">Elige…</option>${REGIONES.map(r=>`<option value="${r.id}" ${r.id===(centro(d.centroId)?.region||UI.region)?'selected':''}>${esc(r.nombre)}</option>`).join('')}</select></label>
+    <label class="f">Centro de salud<select id="d-cen"></select></label></div>
+    <p class="meta" style="margin-top:-6px">¿Tu centro no aparece? <button type="button" class="btn sm" id="d-nuevo-cen">Agregar centro</button></p>
+    <label class="checkrow"><input type="checkbox" id="d-disp" ${d.disponible?'checked':''}><span><b>Agenda abierta</b><br><span class="meta">Si la cierras, los pacientes no podrán pedir horas contigo.</span></span></label>
+    <div><p style="font-weight:600;font-size:14px;margin-bottom:6px">Días de atención</p><div class="daysel">${[1,2,3,4,5,6].map(n=>`<label><input type="checkbox" name="dia" value="${n}" ${(d.dias||[]).includes(n)?'checked':''}>${DIAS_L[n].slice(0,3)}</label>`).join('')}</div></div>
+    <div class="two"><label class="f">Desde<input type="time" id="d-ini" value="${esc(d.inicio)}" step="300"></label><label class="f">Hasta<input type="time" id="d-fin" value="${esc(d.fin)}" step="300"></label></div>
+    <label class="f">Duración de cada hora<select id="d-dur">${[15,20,30,45,60].map(n=>`<option value="${n}" ${Number(d.duracion)===n?'selected':''}>${n} minutos</option>`).join('')}</select></label>
+    <label class="f">Nota para pacientes <small>Ej.: vacaciones, licencia, cambio de box</small><input id="d-nota" value="${esc(d.nota||'')}"></label>
+    ${nuevo?'':`<label class="checkrow"><input type="checkbox" id="d-avisar" checked><span>Avisar a mis pacientes con horas próximas si cierro la agenda o cambio la nota</span></label>`}
+  </div>${foot('Guardar')}</form>`);
+  const fillDCen = () => { const r = val('d-reg'); const cs = centrosEn(r);
+    $('#d-cen').innerHTML = !r ? '<option value="">Primero la región</option>' : `<option value="">Elige…</option>` + cs.map(c=>`<option value="${esc(c.id)}" ${c.id===d.centroId?'selected':''}>${esc(c.nombre)} · ${esc(c.comuna)}</option>`).join(''); };
+  $('#d-reg').onchange = fillDCen; fillDCen();
+  $('#d-nuevo-cen').onclick = () => mCentro(val('d-reg'));
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const dias = [...document.querySelectorAll('input[name=dia]:checked')].map(x=>Number(x.value));
+    const data = { centroId: val('d-cen'), disponible:$('#d-disp').checked, dias, inicio:val('d-ini'), fin:val('d-fin'), duracion:Number(val('d-dur')), nota:val('d-nota') };
+    if (!data.inicio || !data.fin || toMin(data.fin) <= toMin(data.inicio)) return showErr('El horario de término debe ser posterior al de inicio.');
+    if (data.disponible && !dias.length) return showErr('Elige al menos un día o cierra la agenda.');
+    if (!data.centroId) return showErr('Elige el centro de salud donde atiendes.');
+    if (nuevo){
+      const nom = val('d-nom'), esp = val('d-esp'); if (!nom || !esp) return showErr('Completa nombre y especialidad.');
+      try { const id = await addDoc('doctors', { nombre:nom, especialidad:esp, box:val('d-box'), ...data }); UI.medicoId = id; ls.set('medicoId', id); closeModal(); render(); toast('Médico agregado.'); } catch(err){}
+      return;
+    }
+    const cambioNota = data.nota !== (d.nota||''), cerro = d.disponible && !data.disponible;
+    try { await updDoc('doctors', d.id, data); } catch(err){ return; }
+    if ($('#d-avisar')?.checked && (cerro || (cambioNota && data.nota))){
+      const ps = new Map(); S.items.filter(i=>i.tipo==='cita'&&i.medicoId===d.id&&ACTIVA.includes(i.estado)&&citaFutura(i)).forEach(i=>{ if(!ps.has(i.pacienteUid)) ps.set(i.pacienteUid,i); });
+      for (const [uid, i] of ps) await notify('paciente:'+uid, 'disponibilidad', `${d.nombre}${cerro?' cerró su agenda':' actualizó su disponibilidad'}${data.nota?': '+data.nota:''}. Tu hora del ${fFecha(i.fecha)} ${i.hora} sigue registrada; si cambia, te avisaremos.`, i.id);
+      toast(`Disponibilidad guardada. ${ps.size} paciente${ps.size===1?'':'s'} avisado${ps.size===1?'':'s'}.`);
+    } else toast('Disponibilidad guardada.');
+    closeModal();
+  };
+}
+
+function mCentro(regPre){
+  const reg0 = regPre || UI.region || '';
+  openModal('Agregar centro de salud', `<form id="f"><div class="body">
+    <label class="f">Nombre del centro<input id="k-nom" placeholder="Ej.: CESFAM Dr. Juan Pérez" required></label>
+    <div class="two"><label class="f">Tipo<select id="k-tipo">${['Hospital público','Hospital universitario','Clínica privada','CESFAM','SAPU / SAR','Centro médico'].map(t=>`<option>${t}</option>`).join('')}</select></label>
+    <label class="f">Región<select id="k-reg"><option value="">Elige…</option>${REGIONES.map(r=>`<option value="${r.id}" ${r.id===reg0?'selected':''}>${esc(r.nombre)}</option>`).join('')}</select></label></div>
+    <label class="f">Ciudad o comuna<input id="k-com" list="k-coms" placeholder="Ej.: Temuco" required><datalist id="k-coms"></datalist></label>
+  </div>${foot('Agregar centro')}</form>`);
+  const fill = () => { $('#k-coms').innerHTML = comunasDe(val('k-reg')).map(c=>`<option value="${esc(c)}">`).join(''); };
+  $('#k-reg').onchange = fill; fill();
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const nombre = val('k-nom'), region = val('k-reg'), comuna = val('k-com');
+    if (!nombre || !region || !comuna) return showErr('Completa nombre, región y comuna.');
+    if (S.centros.some(c=>c.region===region && c.nombre.toLowerCase()===nombre.toLowerCase())) return showErr('Ese centro ya está registrado en la región.');
+    try { const id = await addDoc('centros', { nombre, tipo: val('k-tipo'), region, comuna }); setUbic(region, comuna, id); closeModal(); location.hash='centros'; render(); toast('Centro agregado.'); } catch(err){}
+  };
+}
+
+function mAvisarPacientes(){
+  const d = doc(UI.medicoId); if (!d) return;
+  const fechas = [...new Set(S.items.filter(i=>i.tipo==='cita'&&i.medicoId===d.id&&ACTIVA.includes(i.estado)&&citaFutura(i)).map(i=>i.fecha))].sort();
+  openModal('Avisar a mis pacientes', `<form id="f"><div class="body">
+    <p class="meta">Envía un aviso a todos los pacientes con hora un día determinado: atrasos, cambio de box, suspensión.</p>
+    ${fechas.length?`<label class="f">Día<select id="v-f">${fechas.map(f=>{ const n=S.items.filter(i=>i.tipo==='cita'&&i.medicoId===d.id&&i.fecha===f&&ACTIVA.includes(i.estado)).length; return `<option value="${f}">${esc(fFechaL(f))} · ${n} paciente${n===1?'':'s'}</option>`; }).join('')}</select></label>
+    <label class="f">Tipo<select id="v-t"><option value="atraso">Atraso</option><option value="disponibilidad">Cambio de box o lugar</option><option value="cancelacion">Suspensión de la agenda</option></select></label>
+    <label class="f">Mensaje<textarea id="v-m" placeholder="Ej.: Voy con 40 minutos de atraso por una urgencia. Les pido paciencia."></textarea></label>
+    <label class="checkrow" id="v-susp-row" hidden><input type="checkbox" id="v-susp" checked><span>Cancelar también las horas de ese día y liberar los cupos</span></label>`
+    :'<div class="empty">No tienes pacientes agendados próximamente.</div>'}
+  </div>${fechas.length?foot('Enviar aviso'):'<footer><button class="btn" type="button" data-close>Cerrar</button></footer>'}</form>`);
+  if (!fechas.length) return;
+  $('#v-t').onchange = e => { $('#v-susp-row').hidden = e.target.value!=='cancelacion'; };
+  $('#f').onsubmit = async e => { e.preventDefault();
+    const f = val('v-f'), t = val('v-t'), m = val('v-m'); if (!m) return showErr('Escribe el mensaje.');
+    const citas = S.items.filter(i=>i.tipo==='cita'&&i.medicoId===d.id&&i.fecha===f&&ACTIVA.includes(i.estado));
+    const btn = e.submitter; if (btn) btn.disabled = true;
+    for (const i of citas){
+      if (t==='cancelacion' && $('#v-susp').checked){ try{ await updDoc('items', i.id, {estado:'cancelada', canceladoPor:'medico', motivoCancelacion:m, actualizado:Date.now()}); }catch(err){} }
+      await notify('paciente:'+i.pacienteUid, t, `${d.nombre} · ${fFecha(f)} ${i.hora}: ${m}`, i.id);
+    }
+    closeModal(); toast(`Aviso enviado a ${citas.length} paciente${citas.length===1?'':'s'}.`);
+  };
+}
+
+/* Refrescar tiempos relativos cada minuto (solo pantalla) */
+setInterval(()=>{ if (!MODAL) render(); }, 60000);
+init();
+</script>
+</body>
+</html>
